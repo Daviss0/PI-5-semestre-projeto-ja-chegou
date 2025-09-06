@@ -1,0 +1,84 @@
+package com.ja.chegou.ja_chegou.controller;
+
+import com.ja.chegou.ja_chegou.entity.Admin;
+import com.ja.chegou.ja_chegou.enumerated.Status;
+import com.ja.chegou.ja_chegou.repository.AdminRepository;
+import com.ja.chegou.ja_chegou.service.AdminService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
+
+@Controller
+@RequestMapping("/admin")
+public class AdminController {
+
+    private AdminService adminService;
+    private AdminRepository adminRepository;
+
+  public AdminController(AdminService adminService, AdminRepository adminRepository) {
+    this.adminService = adminService;
+    this.adminRepository = adminRepository;
+  }
+
+  @GetMapping("/login_adm")
+  public String loginPage(@RequestParam(value = "error", required = false) String error, Model model) {
+    if( error != null) {
+      model.addAttribute("loginError", "e-mail ou senha invalidos");
+    }
+    return "login_adm";
+  }
+
+  @GetMapping("/home")
+  public String homePage(Model model, Principal principal) {
+    String email = principal.getName();
+    Admin admin = adminRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+    model.addAttribute("adminName", admin.getName());
+    return "home";
+  }
+
+  @GetMapping("/usuarios/{id}/toggle-status")
+  public String toggleStatus(@PathVariable Long id) {
+    Admin admin = adminRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+    admin.setStatus(admin.getStatus() == Status.ATIVO ? Status.INATIVO : Status.ATIVO);
+    adminRepository.save(admin);
+
+    return "redirect:/admin/usuarios"; // volta para a lista de admins
+  }
+
+
+  @GetMapping("/usuarios")
+  public String listUsers(Model model) {
+    model.addAttribute("admins", adminRepository.findAll());
+    return "usuarios_adm";
+  }
+
+  @PostMapping("/register")
+  @ResponseBody
+  public ResponseEntity<Admin> register(@RequestBody Admin admin) {
+    Admin newAdmin = adminService.register(admin);
+    return ResponseEntity.ok(newAdmin);
+  }
+
+
+  @PutMapping("/{id}/status")
+  @ResponseBody
+  public ResponseEntity<Admin> updateStatus(@PathVariable Long id, @RequestParam String status) {
+    Admin admin = adminRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+    if(admin.getStatus() == Status.ATIVO){
+      admin.setStatus(Status.INATIVO);
+    }
+    else {
+      admin.setStatus(Status.ATIVO);
+    }
+
+    Admin updated = adminRepository.save(admin);
+    return ResponseEntity.ok(updated);
+  }
+}

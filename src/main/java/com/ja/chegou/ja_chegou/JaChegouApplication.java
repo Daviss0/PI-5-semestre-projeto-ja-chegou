@@ -10,4 +10,5 @@ public class JaChegouApplication {
 		SpringApplication.run(JaChegouApplication.class, args);
 	}
 
+
 }
