@@ -12,4 +12,12 @@ public interface AdminService {
     Optional<Admin> login(String email, String password);
 
     Admin updateStatus(Long id, String status);
+
+    Admin searchById(Long id);
+
+    Admin update(Long id, Admin updatedAdmin);
+
+    Admin updateBasicData(Long id, Admin updatedAdmin);
+
+    void updatePassword(Long id, String currentPassword, String newPassword, String confPassword);
 }

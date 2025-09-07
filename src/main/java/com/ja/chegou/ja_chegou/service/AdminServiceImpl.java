@@ -27,6 +27,8 @@ public class AdminServiceImpl implements AdminService {
         admin.setPassword(passwordEncoder.encode(admin.getPassword()));
         admin.setStatus(Status.ATIVO);
         admin.setRole(Role.ADMIN);
+        admin.setCpf(admin.getCpf().replaceAll("\\D", ""));
+
         return adminRepository.save(admin);
     }
 
@@ -44,4 +46,43 @@ public class AdminServiceImpl implements AdminService {
         return adminRepository.save(admin);
     }
 
+    @Override
+    public Admin searchById(Long id) {
+      return adminRepository.findById(id)
+              .orElseThrow(() -> new RuntimeException("Usuário inválido" + id));
+    }
+    @Override
+    public Admin update(Long id, Admin updatedAdmin) {
+        Admin admin = searchById(id);
+
+        admin.setName(updatedAdmin.getName());
+        admin.setEmail(updatedAdmin.getEmail());
+        admin.setPassword(passwordEncoder.encode(updatedAdmin.getPassword()));
+
+        return adminRepository.save(admin);
+    }
+
+    @Override
+    public Admin updateBasicData(Long id, Admin updatedAdmin){
+      Admin admin = searchById(id);
+
+      admin.setName(updatedAdmin.getName());
+      admin.setEmail(updatedAdmin.getEmail());
+      admin.setStatus(updatedAdmin.getStatus());
+      return adminRepository.save(admin);
+    }
+
+    @Override
+    public void updatePassword(Long id, String currentPassword, String newPassword, String confPassword) {
+        Admin admin = searchById(id);
+
+        if(!passwordEncoder.matches(currentPassword, admin.getPassword())) {
+            throw new RuntimeException("Senha atual incorreta");
+        }
+        if(!newPassword.equals(confPassword)) {
+            throw new RuntimeException("A nova senha e a confirmação não coincidem");
+        }
+        admin.setPassword(passwordEncoder.encode(newPassword));
+        adminRepository.save(admin);
+    }
 }

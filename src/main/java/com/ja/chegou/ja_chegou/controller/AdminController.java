@@ -4,9 +4,11 @@ import com.ja.chegou.ja_chegou.entity.Admin;
 import com.ja.chegou.ja_chegou.enumerated.Status;
 import com.ja.chegou.ja_chegou.repository.AdminRepository;
 import com.ja.chegou.ja_chegou.service.AdminService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -56,6 +58,69 @@ public class AdminController {
   public String listUsers(Model model) {
     model.addAttribute("admins", adminRepository.findAll());
     return "usuarios_adm";
+  }
+
+  @GetMapping("/usuarios/new")
+  public String newAdminForm(Model model) {
+    model.addAttribute("admin", new Admin());
+    model.addAttribute("isEdit", false);
+    return "admin_form";
+  }
+
+  @GetMapping("/usuarios/{id}/edit")
+  public String editAdminForm(@PathVariable Long id, Model model) {
+    Admin admin = adminRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+    model.addAttribute("admin", admin);
+    model.addAttribute("isEdit", true);
+    return "admin_form";
+  }
+
+  @GetMapping("/editar/{id}")
+  public String showEditForm(@PathVariable Long id, Model model) {
+    Admin admin = adminService.searchById(id);
+
+    System.out.println(">>> Admin carregado para edição: ID=" + admin.getId()
+            + ", Nome=" + admin.getName()
+            + ", Email=" + admin.getEmail());
+
+    model.addAttribute("admin", admin);
+    return "edit_adm";
+  }
+
+  @PostMapping("/editar/{id}")
+  public String saveEdit(@PathVariable Long id,
+                         @ModelAttribute("admin") Admin adminUpdated,
+                         @RequestParam(required = false) String currentPassword,
+                         @RequestParam(required = false) String newPassword,
+                         @RequestParam(required = false) String confPassword,
+                         Model model) {
+
+    try {
+      adminService.updateBasicData(id, adminUpdated);
+
+      if (newPassword != null && !newPassword.isBlank()) {
+        adminService.updatePassword(id, currentPassword, newPassword, confPassword);
+      }
+
+      return "redirect:/admin/usuarios";
+
+    } catch (RuntimeException e) {
+      model.addAttribute("errorMessage", e.getMessage());
+      model.addAttribute("admin", adminUpdated);
+      return "edit_adm";
+    }
+  }
+
+
+  @PostMapping("/usuarios")
+   public String saveAdmin(@ModelAttribute ("admin") @Valid Admin admin,
+                           BindingResult result) {
+    if(result.hasErrors()) {
+      return "admin_form";
+    }
+    adminService.register(admin);
+    return "redirect:/admin/usuarios";
   }
 
   @PostMapping("/register")

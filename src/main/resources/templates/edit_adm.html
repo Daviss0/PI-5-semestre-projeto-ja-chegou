@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar usuário</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" th:href="@{/admin/home}">Já Chegou</a>
+        <div class="collapse navbar-collapse justify-content-end">
+            <a class="btn btn-outline-light" th:href="@{/logout}">Sair</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6"> <!-- largura de 6 colunas (meio da tela) -->
+            <div class="card shadow-lg p-4 rounded-3">
+                <h3 class="mb-4 text-center">Editar Usuário</h3>
+
+                <form th:action="@{/admin/editar/{id}(id=${admin.id})}" th:object="${admin}" method="post">
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Nome</label>
+                        <input type="text" th:field="*{name}" class="form-control" id="name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-mail</label>
+                        <input type="email" th:field="*{email}" class="form-control" id="email" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select th:field="*{status}" class="form-select" id="status">
+                            <option value="ATIVO">Ativo</option>
+                            <option value="INATIVO">Inativo</option>
+                        </select>
+                    </div>
+
+                    <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+                        <span th:text="${errorMessage}"></span>
+                    </div>
+
+
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Senha atual</label>
+                        <input type="password" name="currentPassword" class="form-control" id="currentPassword">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">Nova senha</label>
+                        <input type="password" name="newPassword" class="form-control" id="newPassword">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confPassword" class="form-label">Confirmar nova senha</label>
+                        <input type="password" name="confPassword" class="form-control" id="confPassword">
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a th:href="@{/admin/usuarios}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
