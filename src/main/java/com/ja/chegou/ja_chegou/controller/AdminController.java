@@ -12,6 +12,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/admin")
@@ -40,6 +41,11 @@ public class AdminController {
             .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
     model.addAttribute("adminName", admin.getName());
     return "home";
+  }
+
+  @GetMapping("/menu_users")
+  public String menuUsers() {
+    return "menu_users";
   }
 
   @GetMapping("/usuarios/{id}/toggle-status")
@@ -114,21 +120,35 @@ public class AdminController {
 
 
   @PostMapping("/usuarios")
-   public String saveAdmin(@ModelAttribute ("admin") @Valid Admin admin,
-                           BindingResult result) {
-    if(result.hasErrors()) {
+  public String saveAdmin(@ModelAttribute("admin") @Valid Admin admin,
+                          BindingResult result,
+                          Model model) {
+    if (result.hasErrors()) {
       return "admin_form";
     }
-    adminService.register(admin);
+
+    try {
+      adminService.register(admin, admin.getConfPassword());
+    } catch (IllegalArgumentException e) {
+      model.addAttribute("errorMessage", e.getMessage());
+      return "admin_form";
+    }
+
     return "redirect:/admin/usuarios";
   }
 
+
   @PostMapping("/register")
   @ResponseBody
-  public ResponseEntity<Admin> register(@RequestBody Admin admin) {
-    Admin newAdmin = adminService.register(admin);
-    return ResponseEntity.ok(newAdmin);
+  public ResponseEntity<Map<String, Object>> register(@RequestBody Admin admin) {
+    try {
+      Admin newAdmin = adminService.register(admin, admin.getConfPassword());
+      return ResponseEntity.ok(Map.of("admin", newAdmin));
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    }
   }
+
 
 
   @PutMapping("/{id}/status")

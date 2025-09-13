@@ -4,6 +4,7 @@ import com.ja.chegou.ja_chegou.entity.Admin;
 import com.ja.chegou.ja_chegou.enumerated.Role;
 import com.ja.chegou.ja_chegou.enumerated.Status;
 import com.ja.chegou.ja_chegou.repository.AdminRepository;
+import com.ja.chegou.ja_chegou.utils.CpfUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,14 +24,30 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public Admin register(Admin admin) {
+    public Admin register(Admin admin, String confPassword) {
+
+        if (!admin.getPassword().equals(confPassword)) {
+            throw new IllegalArgumentException("As senhas não conferem!");
+        }
+
+        if (!CpfUtils.isValidCPF(admin.getCpf())) {
+            throw new IllegalArgumentException("CPF inválido!");
+        }
+
+        String cpfSemMascara = admin.getCpf().replaceAll("\\D", "");
+
+        if (adminRepository.findByCpf(cpfSemMascara).isPresent()) {
+            throw new IllegalArgumentException("Já existe um usuário com este CPF!");
+        }
+
         admin.setPassword(passwordEncoder.encode(admin.getPassword()));
         admin.setStatus(Status.ATIVO);
         admin.setRole(Role.ADMIN);
-        admin.setCpf(admin.getCpf().replaceAll("\\D", ""));
+        admin.setCpf(cpfSemMascara);
 
         return adminRepository.save(admin);
     }
+
 
     @Override
     public Optional<Admin> login(String email, String password) {

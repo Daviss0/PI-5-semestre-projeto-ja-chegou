@@ -7,7 +7,6 @@
 </head>
 <body class="bg-light">
 
-<!-- Navbar fixa no topo -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid">
         <a class="navbar-brand" th:href="@{/admin/home}">Já Chegou</a>
@@ -17,31 +16,39 @@
     </div>
 </nav>
 
-<!-- Conteúdo centralizado -->
 <div class="d-flex align-items-center justify-content-center" style="min-height: 90vh;">
     <div class="card shadow-lg p-4" style="width: 400px; border-radius: 12px;">
         <h2 class="text-primary mb-4 text-center">Adicionar Administrador</h2>
 
+        <div class="alert alert-danger" th:if="${errorMessage}">
+            <span th:text="${errorMessage}"></span>
+        </div>
+
         <form th:action="@{/admin/usuarios}" th:object="${admin}" method="post">
 
             <div class="mb-3">
-                <label class="form-label">Nome</label>
-                <input type="text" th:field="*{name}" class="form-control" placeholder="Digite o nome">
+                <label for="name" class="form-label">Nome</label>
+                <input type="text" id="name" name="name" th:field="*{name}" class="form-control" placeholder="Digite o nome" required>
             </div>
 
             <div class="mb-3">
-                <label class="form-label">E-mail</label>
-                <input type="email" th:field="*{email}" class="form-control" placeholder="Digite o e-mail">
+                <label for="email" class="form-label">E-mail</label>
+                <input type="email" id="email" name="email" th:field="*{email}" class="form-control" placeholder="Digite o e-mail" required>
             </div>
 
             <div class="mb-3">
-                <label class="form-label">Senha</label>
-                <input type="password" th:field="*{password}" class="form-control" placeholder="Digite a senha">
+                <label for="password" class="form-label">Senha</label>
+                <input type="password" id="password" name="password" th:field="*{password}" class="form-control" placeholder="Digite a senha" required>
             </div>
 
             <div class="mb-3">
-                <label class="form-label">CPF</label>
-                <input type="text" th:field="*{cpf}" class="form-control" placeholder="Digite o CPF">
+                <label for="confPassword" class="form-label">Confirmação de senha</label>
+                <input type="password" id="confPassword" name="confPassword" class="form-control" placeholder="Confirme a senha" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="cpf" class="form-label">CPF</label>
+                <input type="text" id="cpf" name="cpf" th:field="*{cpf}" class="form-control" placeholder="Digite o CPF" required>
                 <div class="text-danger" th:if="${#fields.hasErrors('cpf')}" th:errors="*{cpf}"></div>
             </div>
 

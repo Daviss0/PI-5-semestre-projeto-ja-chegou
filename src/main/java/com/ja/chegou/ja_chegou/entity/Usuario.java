@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import org.hibernate.validator.constraints.br.CPF;
 
 @Entity
 @AllArgsConstructor
@@ -41,6 +42,14 @@ public class Usuario {
     @Column(nullable = false)
     private Role role;
 
+    @NotBlank(message = "O CPF é obrigatório")
+    @CPF(message = "CPF inválido")
+    @Column(name = "cpf", unique = true, nullable = false, length = 11)
+    private String cpf;
+
+    @Transient
+    private String confPassword;
+
     // getters & setters
     public void setId(Long id) {this.id = id;}
 
@@ -65,4 +74,12 @@ public class Usuario {
     public Role getRole() {return role;}
 
     public void setRole(Role role) {this.role = role;}
+
+    public String getCpf() {return cpf;}
+
+    public void setCpf(String cpf) {this.cpf = cpf;}
+
+    public String getConfPassword() {return confPassword;}
+
+    public void setConfPassword(String confPassword) {this.confPassword = confPassword;}
 }

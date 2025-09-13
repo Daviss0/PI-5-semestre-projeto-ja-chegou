@@ -7,7 +7,7 @@ import java.util.Optional;
 
 
 public interface AdminService {
-    Admin register(Admin admin);
+    Admin register(Admin admin, String confPassword);
 
     Optional<Admin> login(String email, String password);
 

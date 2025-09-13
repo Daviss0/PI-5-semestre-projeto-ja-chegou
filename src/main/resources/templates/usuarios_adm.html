@@ -23,7 +23,7 @@
 
         <div class="mb-3">
             <a class="btn btn-success" th:href="@{/admin/usuarios/new}">+ Novo Administrador</a>
-            <a th:href="@{/admin/home}" class="btn btn-secondary">Voltar</a>
+            <a th:href="@{/admin/menu_users}" class="btn btn-secondary">Voltar</a>
 
         </div>
 
@@ -46,12 +46,14 @@
                 <td th:text="${admin.cpf}"></td>
                 <td th:text="${admin.status}"></td>
                 <td>
+                    <div class="btn-group" role="group">
                     <a th:href="@{/admin/editar/{id}(id=${admin.id})}" class="btn btn-warning btn-sm">Editar</a>
                     <a th:href="@{'/admin/usuarios/' + ${admin.id} + '/toggle-status'}"
                        class="btn"
                        th:classappend="${admin.status.name() == 'ATIVO'} ? 'btn-danger btn-sm' : 'btn-success btn-sm'">
                         <span th:text="${admin.status.name() == 'ATIVO'} ? 'Desativar' : 'Ativar'"></span>
                     </a>
+                    </div>
                 </td>
             </tr>
             </tbody>
