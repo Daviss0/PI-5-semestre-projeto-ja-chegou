@@ -4,7 +4,7 @@ import com.ja.chegou.ja_chegou.entity.Driver;
 import com.ja.chegou.ja_chegou.enumerated.Role;
 import com.ja.chegou.ja_chegou.enumerated.Status;
 import com.ja.chegou.ja_chegou.repository.DriverRepository;
-import com.ja.chegou.ja_chegou.repository.UsuarioRepository;
+import com.ja.chegou.ja_chegou.repository.UsuariosRepository;
 import com.ja.chegou.ja_chegou.utils.CnhUtils;
 import com.ja.chegou.ja_chegou.utils.CpfUtils;
 import com.ja.chegou.ja_chegou.service.DriverService;
@@ -13,8 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDate;
 
 @Controller
 @RequestMapping("/driver")
@@ -25,7 +23,7 @@ public class DriverController {
     @Autowired
     private DriverRepository driverRepository;
     @Autowired
-    private UsuarioRepository usuarioRepository;
+    private UsuariosRepository usuariosRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -56,12 +54,12 @@ public class DriverController {
             model.addAttribute("errorMessage", "CPF invalido");
             return "driver_form";
         }
-        if (usuarioRepository.findByCpf(driver.getCpf()).isPresent()) {
+        if (usuariosRepository.findByCpf(driver.getCpf()).isPresent()) {
             model.addAttribute("driver", driver);
             model.addAttribute("errorMessage", "Já existe um usuário com este CPF!");
             return "driver_form";
         }
-        if(usuarioRepository.findByEmail(driver.getEmail()).isPresent()) {
+        if(usuariosRepository.findByEmail(driver.getEmail()).isPresent()) {
             model.addAttribute("driver", driver);
             model.addAttribute("errorMessage","Já existe um usuário com este email");
             return "driver_form";
@@ -81,8 +79,8 @@ public class DriverController {
         }
 
         driver.setCpf(driver.getCpf().replaceAll("\\D", ""));
-
         driver.setRole(Role.DRIVER);
+        driver.setPassword(passwordEncoder.encode(driver.getPassword()));
 
         driverService.save(driver);
         return "redirect:/driver/usuarios_driver";

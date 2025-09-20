@@ -12,9 +12,9 @@
         <h3 class="text-center mb-3 text-primary">Já Chegou</h3>
         <p class="text-center text-muted">Login para administradores</p>
 
-        <div th:if="${loginError}" class="alert alert-danger text-center">
-            <span th:text="${loginError}"></span>
 
+        <div th:if="${param.error}" class="alert alert-danger">
+            [[${param.error}]]
         </div>
 
         <!-- Formulário de login -->

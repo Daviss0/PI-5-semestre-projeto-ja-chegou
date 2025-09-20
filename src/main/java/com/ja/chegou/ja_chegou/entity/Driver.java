@@ -10,7 +10,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "TB_DRIVER", uniqueConstraints = {@UniqueConstraint(columnNames = "EMAIL")})
-public class Driver extends Usuario{
+public class Driver extends Usuarios {
 
     @NotBlank(message = "A cnh é obrigatória")
     @Size(min = 5, max = 20, message = "A CNH deve ter entre 5 e 20 caractéres")

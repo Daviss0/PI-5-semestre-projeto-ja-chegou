@@ -1,6 +1,7 @@
 package com.ja.chegou.ja_chegou.security;
 
 import com.ja.chegou.ja_chegou.service.CustomUserDetailsService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,8 +17,11 @@ public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
 
-    public SecurityConfig(CustomUserDetailsService userDetailsService) {
+    @Autowired
+    CustomAuthenticationFailureHandler customAuthenticationFailureHandler;
+    public SecurityConfig(CustomUserDetailsService userDetailsService, CustomAuthenticationFailureHandler customAuthenticationFailureHandler) {
         this.customUserDetailsService = userDetailsService;
+        this.customAuthenticationFailureHandler = customAuthenticationFailureHandler;
     }
 
     @Bean
@@ -27,12 +31,14 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/admin/login_adm", "/admin/register", "/h2-console/**").permitAll()
+                        .requestMatchers("/admin/**", "/driver/**", "/user/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .loginPage("/admin/login_adm")
                         .loginProcessingUrl("/admin/login")
                         .defaultSuccessUrl("/admin/home", true)
+                        .failureHandler(customAuthenticationFailureHandler)
                         .permitAll()
                 )
                 .logout(logout -> logout.permitAll());

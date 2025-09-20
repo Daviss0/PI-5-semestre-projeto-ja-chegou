@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table (name = "TB_ADMIN", uniqueConstraints = {@UniqueConstraint(columnNames = "EMAIL")})
-public class Admin extends Usuario{
+public class Admin extends Usuarios {
 
 
 }

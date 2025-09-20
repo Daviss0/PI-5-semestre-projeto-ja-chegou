@@ -28,8 +28,8 @@ public class AdminController {
 
   @GetMapping("/login_adm")
   public String loginPage(@RequestParam(value = "error", required = false) String error, Model model) {
-    if( error != null) {
-      model.addAttribute("loginError", "e-mail ou senha invalidos");
+    if (error != null) {
+      model.addAttribute("loginError", error);
     }
     return "login_adm";
   }
