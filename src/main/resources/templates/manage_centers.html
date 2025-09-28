@@ -43,6 +43,9 @@
     </form>
   </div>
 
+  <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+  <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
   <div class="card shadow-lg p-4">
     <h4 class="text-secondary mb-3">Centrais Cadastradas</h4>
     <table class="table table-striped align-middle">

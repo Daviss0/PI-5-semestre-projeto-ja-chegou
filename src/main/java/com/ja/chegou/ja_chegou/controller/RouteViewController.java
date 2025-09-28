@@ -1,8 +1,10 @@
 package com.ja.chegou.ja_chegou.controller;
 
 import com.ja.chegou.ja_chegou.entity.Route;
+import com.ja.chegou.ja_chegou.entity.Truck;
 import com.ja.chegou.ja_chegou.service.DistributionCenterService;
 import com.ja.chegou.ja_chegou.service.RouteService;
+import com.ja.chegou.ja_chegou.service.TruckService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -13,23 +15,27 @@ public class RouteViewController {
 
     private final RouteService routeService;
     private final DistributionCenterService centerService;
+    private final TruckService truckService;
 
-    public RouteViewController(RouteService routeService, DistributionCenterService centerService) {
+    public RouteViewController(RouteService routeService, DistributionCenterService centerService, TruckService truckService) {
         this.routeService = routeService;
         this.centerService = centerService;
+        this.truckService = truckService;
     }
 
-    // Tela de gerenciamento
     @GetMapping("/manage")
     public String manageRoutes(Model model) {
         model.addAttribute("centers", centerService.findAll());
         model.addAttribute("routes", routeService.findAll());
         model.addAttribute("route", new Route());
+        model.addAttribute("trucks", truckService.findAll());
         return "manage_routes";
     }
-
-    @PostMapping
-    public String saveRoute(@ModelAttribute("route") Route route) {
+    
+    @PostMapping("/manage")
+    public String saveRoute(@ModelAttribute Route route, @RequestParam Long truckId) {
+        Truck truck = truckService.findById(truckId);
+        route.setTruck(truck);
         routeService.save(route);
         return "redirect:/routes/manage";
     }

@@ -12,18 +12,22 @@ import java.time.LocalDate;
 @Table(name = "TB_DRIVER", uniqueConstraints = {@UniqueConstraint(columnNames = "EMAIL")})
 public class Driver extends Usuarios {
 
-    @NotBlank(message = "A cnh é obrigatória")
-    @Size(min = 5, max = 20, message = "A CNH deve ter entre 5 e 20 caractéres")
+    @NotBlank(message = "A CNH é obrigatória")
+    @Size(min = 5, max = 20, message = "A CNH deve ter entre 5 e 20 caracteres")
     @Column(name = "CNH", unique = true, nullable = false, length = 20)
     private String cnh;
 
     @NotNull(message = "A categoria da CNH é obrigatória")
     @Enumerated(EnumType.STRING)
+    @Column(name = "cnh_category", nullable = false)
     private CnhCategory cnhCategory;
 
     @NotNull(message = "A validade da CNH é obrigatória")
     @Column(name = "cnh_validity", nullable = false)
     private LocalDate cnhValidity;
+
+    @OneToOne(mappedBy = "driver")
+    private Truck truck;
 
     //getters & setters
     public String getCnh() {return cnh;}
@@ -38,4 +42,7 @@ public class Driver extends Usuarios {
 
     public void setCnhValidity(LocalDate cnhValidity) {this.cnhValidity = cnhValidity;}
 
+    public Truck getTruck() {return truck;}
+
+    public void setTruck(Truck truck) {this.truck = truck;}
 }

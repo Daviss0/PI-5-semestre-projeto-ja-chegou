@@ -44,4 +44,9 @@ public class DriverServiceImpl implements DriverService{
         driver.setStatus(driver.getStatus().equals(Status.ATIVO) ? Status.INATIVO : Status.ATIVO);
         driverRepository.save(driver);
     }
+
+    @Override
+    public List<Driver> findAllAvailable() {
+        return driverRepository.findByTruckIsNull();
+    }
 }

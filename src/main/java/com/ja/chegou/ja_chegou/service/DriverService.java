@@ -14,4 +14,6 @@ public interface DriverService {
     void delete(Long id);
 
     void alterarStatus(Long id);
+
+    List<Driver> findAllAvailable();
 }

@@ -5,6 +5,7 @@ import com.ja.chegou.ja_chegou.service.DistributionCenterService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequestMapping("/centers")
@@ -16,7 +17,6 @@ public class DistributionCenterViewController {
         this.centerService = centerService;
     }
 
-    // Tela de gerenciamento
     @GetMapping
     public String manageCenters(Model model) {
         model.addAttribute("centers", centerService.findAll());
@@ -24,17 +24,21 @@ public class DistributionCenterViewController {
         return "manage_centers";
     }
 
-    // Salvar nova central
     @PostMapping
     public String saveCenters(@ModelAttribute("center") DistributionCenter center) {
         centerService.save(center);
         return "redirect:/centers";
     }
 
-    // Excluir central
     @GetMapping("/{id}/delete")
-    public String deleteCenter(@PathVariable Long id) {
-        centerService.delete(id);
+    public String deleteCenter(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            centerService.delete(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Central excluída com sucesso!");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/centers";
     }
+
 }

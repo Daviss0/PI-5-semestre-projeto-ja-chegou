@@ -38,6 +38,13 @@ public class Route {
     @Positive(message = "A velocidade média deve ser maior que zero")
     private Integer averageSpeed;
 
+    @Positive(message = "A capacidade mínima da rota deve ser maior que zero")
+    private Double requiredCapacity;
+
+    @ManyToOne
+    @JoinColumn(name = "truck_id")
+    private Truck truck;
+
     // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -63,4 +70,12 @@ public class Route {
     public Integer getAverageSpeed() {return averageSpeed;}
 
     public void setAverageSpeed(Integer averageSpeed) {this.averageSpeed = averageSpeed;}
+
+    public Double getRequiredCapacity() { return requiredCapacity; }
+
+    public void setRequiredCapacity(Double requiredCapacity) { this.requiredCapacity = requiredCapacity; }
+
+    public Truck getTruck() { return truck; }
+
+    public void setTruck(Truck truck) { this.truck = truck; }
 }

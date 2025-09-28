@@ -13,8 +13,7 @@
     <div class="card shadow-lg p-4 mb-4">
         <h2 class="text-primary mb-3">Gerenciamento de Rotas</h2>
 
-        <!-- Formulário -->
-        <form th:action="@{/routes}" th:object="${route}" method="post" id="routeForm">
+        <form th:action="@{/routes/manage}" th:object="${route}" method="post" id="routeForm">
             <div class="row mb-3">
                 <div class="col-md-3">
                     <label for="origin" class="form-label">Central de Distribuição</label>
@@ -35,6 +34,15 @@
                            th:field="*{destinationAddress}"
                            class="form-control"
                            placeholder="Digite o endereço ou CEP" required>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="truck" class="form-label">Caminhão</label>
+                    <select class="form-select" name="truckId" required>
+                        <option value="">Selecione...</option>
+                        <option th:each="truck : ${trucks}" th:value="${truck.id}"
+                                th:text="${truck.plate + ' - ' + truck.model}"></option>
+                    </select>
                 </div>
 
                 <div class="col-md-3">
