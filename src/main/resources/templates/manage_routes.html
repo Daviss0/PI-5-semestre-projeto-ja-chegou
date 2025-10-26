@@ -114,6 +114,10 @@
                        onclick="return confirm('Tem certeza que deseja excluir esta rota?');">
                         Excluir
                     </a>
+                    <a th:href="@{'/collections/status?(routeId=' + ${route.id} + ')'}"
+                       class="btn btn-success btn-sm">
+                        Agendar coleta
+                    </a>
                 </td>
             </tr>
             <tr th:if="${#lists.isEmpty(routes)}">
@@ -124,7 +128,6 @@
     </div>
 </div>
 
-<!-- Script Leaflet + Nominatim + OSRM -->
 <script>
     var map = L.map('map').setView([-23.55, -46.63], 12);
 
@@ -134,7 +137,6 @@
 
     var routeLayer, originMarker, destMarker;
 
-    // Ícones
     var originIcon = L.icon({
         iconUrl: 'https://cdn-icons-png.flaticon.com/512/252/252025.png',
         iconSize: [40, 40],

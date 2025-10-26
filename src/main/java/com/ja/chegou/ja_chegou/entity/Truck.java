@@ -45,6 +45,13 @@ public class Truck {
     @JoinColumn(name = "driver_id")
     private Driver driver;
 
+    @ManyToOne
+    @JoinColumn(name = "route_id")
+    private Route route;
+
+    private Double currentLatitude;
+    private Double currentLongitude;
+
     //getters & setters
     public void setId(Long id) {this.id = id;}
 
@@ -77,4 +84,17 @@ public class Truck {
     public Driver getDriver() {return driver;}
 
     public void setDriver(Driver driver) {this.driver = driver;}
+
+    public Route getRoute() {return route;}
+
+    public void setRoute(Route route) {this.route = route;}
+
+    public Double getCurrentLatitude() {return currentLatitude;}
+
+    public void setCurrentLatitude(Double currentLatitude) {this.currentLatitude = currentLatitude;}
+
+    public Double getCurrentLongitude() {return currentLongitude;}
+
+    public void setCurrentLongitude(Double currentLongitude) {this.currentLongitude = currentLongitude;}
+
 }

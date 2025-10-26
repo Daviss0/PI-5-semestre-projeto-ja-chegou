@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -19,7 +18,9 @@ public class SecurityConfig {
 
     @Autowired
     CustomAuthenticationFailureHandler customAuthenticationFailureHandler;
-    public SecurityConfig(CustomUserDetailsService userDetailsService, CustomAuthenticationFailureHandler customAuthenticationFailureHandler) {
+
+    public SecurityConfig(CustomUserDetailsService userDetailsService,
+                          CustomAuthenticationFailureHandler customAuthenticationFailureHandler) {
         this.customUserDetailsService = userDetailsService;
         this.customAuthenticationFailureHandler = customAuthenticationFailureHandler;
     }
@@ -30,8 +31,22 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/", "/mainPage",
+                                "/manifest.webmanifest",
+                                "/sw.js",
+                                "/icons/**",
+                                "/css/**", "/js/**", "/images/**", "/webjars/**"
+                        ).permitAll()
+
+                        .requestMatchers("/login", "/cadastro").permitAll()
+
                         .requestMatchers("/admin/login_adm", "/admin/register", "/h2-console/**").permitAll()
+                        .requestMatchers("/api/trucks/public/**").permitAll()
+                        // OBS: hoje você exige ADMIN também para /driver/** e /user/**.
+                        // Se quiser papéis separados, troque para .hasRole("DRIVER") / .hasRole("USER")
                         .requestMatchers("/admin/**", "/driver/**", "/user/**").hasRole("ADMIN")
+
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
@@ -47,14 +62,12 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder (){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
+        return cfg.getAuthenticationManager();
     }
-
-
 }

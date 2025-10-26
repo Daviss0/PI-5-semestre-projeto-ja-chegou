@@ -1,7 +1,6 @@
 package com.ja.chegou.ja_chegou.service;
 
 import com.ja.chegou.ja_chegou.entity.Route;
-import com.ja.chegou.ja_chegou.entity.Truck;
 import com.ja.chegou.ja_chegou.repository.RouteRepository;
 import com.ja.chegou.ja_chegou.repository.TruckRepository;
 import org.springframework.stereotype.Service;
@@ -45,6 +44,13 @@ public class RouteServiceImpl implements RouteService{
         return routeRepository.findByTruckId(truckId);
     }
 
-
+    @Override
+    public Route findById(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("ID da rota não pode ser nulo");
+        }
+        return routeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Rota " + id + " não encontrada"));
+   }
 
 }

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <title>Já Chegou</title>
+
+  <!-- Manifest PWA -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#00264d"/>
+
+  <!-- Estilos simples -->
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+    .topbar{position:sticky;top:0;background:#00264d;color:#fff;padding:12px 16px;z-index:10;font-weight:700}
+    .container{padding:16px;max-width:640px;margin:0 auto}
+    .card{background:#fff;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,.06);padding:16px;margin-bottom:12px}
+    .btn{appearance:none;border:0;background:#00264d;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer}
+    .row{display:flex;gap:8px}
+    .grow{flex:1}
+    #map{height:420px;width:100%;border-radius:12px}
+    .bottomnav{position:sticky;bottom:0;background:#fff;border-top:1px solid #e5e7eb;padding:8px;display:flex;gap:8px;justify-content:space-around}
+    .link{color:#00264d;text-decoration:underline}
+  </style>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+</head>
+<body>
+<header class="topbar">Já Chegou</header>
+
+<main class="container">
+  <section class="card">
+    <h1 style="margin:0">Mapa em tempo real</h1>
+    <p style="margin-top:8px" id="statusText">
+      Modo demonstração sem backend: caminhões simulados.
+    </p>
+  </section>
+
+  <section class="card">
+    <div id="map"></div>
+  </section>
+
+  <section class="card row">
+    <!-- Cadastrar: só quando NÃO logado -->
+    <button class="btn grow" th:if="${!logged}" onclick="location.href='/cadastro'">Cadastrar</button>
+
+    <!-- Entrar / Minha conta (condicional) -->
+    <button class="btn grow" th:if="${!logged}" onclick="location.href='/login'">Entrar</button>
+    <button class="btn grow" th:if="${logged}"  onclick="location.href='/me'">Minha conta</button>
+
+    <!-- Receber alertas -->
+    <button id="btnAlerts" class="btn grow" onclick="enableAlerts()" disabled>Receber alertas</button>
+  </section>
+</main>
+
+<nav class="bottomnav">
+  <button class="btn grow" onclick="location.href='/'">Home</button>
+  <button class="btn grow" th:if="${!logged}" onclick="location.href='/login'">Entrar</button>
+  <button class="btn grow" th:if="${!logged}" onclick="location.href='/cadastro'">Cadastrar</button>
+  <button class="btn grow" th:if="${logged}"  onclick="location.href='/me'">Minha conta</button>
+</nav>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- App JS (com Thymeleaf inline) -->
+<script th:inline="javascript">
+  // ------- CONFIGURAÇÕES -------
+  const MOCK = false;
+  console.log("🚀 Script Já Chegou carregado! MOCK =", MOCK);
+  const API_BASE = location.origin;
+
+  // Service Worker (PWA)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  }
+
+  // Botão de alertas Push
+  (function(){
+    const btn = document.getElementById('btnAlerts');
+    if ('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window) {
+      btn.removeAttribute('disabled');
+    }
+  })();
+
+  async function enableAlerts(){
+    const logged = /*[[${logged}]]*/ false || false;
+    if (!logged) { location.href='/cadastro'; return; }
+
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+
+    const reg = await navigator.serviceWorker.ready;
+    const vapidPublicKey = '';
+    const applicationServerKey = vapidPublicKey ? urlBase64ToUint8Array(vapidPublicKey) : undefined;
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+
+    const btn = document.getElementById('btnAlerts');
+    btn.textContent = 'Alertas ativados';
+    btn.disabled = true;
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+
+  // ------- MAPA REAL (usa backend) -------
+  (async function initMap(){
+    const map = L.map('map').setView([-23.55, -46.63], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            { attribution: '© OpenStreetMap' }).addTo(map);
+
+    if (!MOCK) {
+      try {
+        // === 1. BUSCA ROTAS REAIS ===
+        const res = await fetch(API_BASE + '/api/routes/public');
+        const routes = await res.json();
+
+        routes.forEach(route => {
+          const latlngs = route.coordinates.map(c => [c[0], c[1]]);
+          const poly = L.polyline(latlngs, { color: 'green', weight: 5 }).addTo(map);
+          map.fitBounds(poly.getBounds(), { padding:[20,20] });
+        });
+
+        // === 2. BUSCA CAMINHÕES E ATUALIZA POSIÇÃO ===
+        // === 2. BUSCA CAMINHÕES E ATUALIZA POSIÇÃO ===
+        const truckMarkers = {};
+
+        async function updateTrucks() {
+          const resp = await fetch(API_BASE + '/api/trucks/public/live');
+          if (!resp.ok) throw new Error('Falha ao carregar caminhões');
+          const trucks = await resp.json();
+
+          trucks.forEach(t => {
+            if (!t.lat || !t.lng) return; // ignora se não tiver posição
+
+            if (!truckMarkers[t.id]) {
+              truckMarkers[t.id] = L.marker([t.lat, t.lng], {
+                icon: L.icon({
+                  iconUrl: '/icons/icon-192.png', // seu ícone
+                  iconSize: [36,36],
+                  iconAnchor: [18,36]
+                })
+              }).addTo(map);
+            } else {
+              // movimentação suave
+              const marker = truckMarkers[t.id];
+              const start = marker.getLatLng();
+              const end = L.latLng(t.lat, t.lng);
+              const steps = 20;
+              let step = 0;
+              const interval = setInterval(() => {
+                step++;
+                const lat = start.lat + (end.lat - start.lat) * (step/steps);
+                const lng = start.lng + (end.lng - start.lng) * (step/steps);
+                marker.setLatLng([lat, lng]);
+                if (step >= steps) clearInterval(interval);
+              }, 100);
+            }
+          });
+        }
+
+        updateTrucks();
+        setInterval(updateTrucks, 3000);
+
+      } catch (err) {
+        console.error('Erro ao carregar dados do backend:', err);
+        alert('Erro ao conectar com o servidor de rotas.');
+      }
+    } else {
+      // ===== MOCK LOCAL (modo antigo, apenas para testes offline) =====
+      const from = [-23.5497, -46.6333];
+      const to   = [-23.5723, -46.6417];
+      const poly = L.polyline([from, [-23.557, -46.637], [-23.565, -46.639], to],
+              { weight: 5 }).addTo(map);
+      map.fitBounds(poly.getBounds(), { padding:[20,20] });
+
+      const truckMarkers = {};
+      const path = poly.getLatLngs().map(p=>[p.lat, p.lng]);
+      const trucks = [{ id:'T-01', t:0.00 },{ id:'T-02', t:0.33 },{ id:'T-03', t:0.66 }];
+      setInterval(()=>{
+        trucks.forEach(tr=>{
+          tr.t = (tr.t + 0.01) % 1;
+          const idx = Math.floor(tr.t * (path.length-1));
+          const a = path[idx], b = path[Math.min(idx+1, path.length-1)];
+          const f = (tr.t * (path.length-1)) % 1;
+          const lat = a[0] + (b[0]-a[0])*f;
+          const lng = a[1] + (b[1]-a[1])*f;
+          if (!truckMarkers[tr.id]) truckMarkers[tr.id] = L.marker([lat, lng]).addTo(map);
+          else truckMarkers[tr.id].setLatLng([lat, lng]);
+        });
+      }, 200);
+    }
+  })();
+</script>
+
+</body>
+</html>

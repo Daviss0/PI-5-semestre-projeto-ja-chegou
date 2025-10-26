@@ -9,6 +9,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Controller
 @RequestMapping("/truck")
 public class TruckController {
@@ -93,6 +96,50 @@ public class TruckController {
         model.addAttribute("truckStatus", truckService.getTruckStatusSummary());
         model.addAttribute("capacityPerRoute", truckService.getTotalCapacityPerRoute());
         return "truck_reports";
+    }
+
+    @RestController
+    @RequestMapping("/api/trucks/public")
+    static class TruckPublicController {
+        private final TruckService truckService;
+
+        public TruckPublicController(TruckService truckService) {
+            this.truckService = truckService;
+        }
+
+        @GetMapping("/live")
+        public List<TruckMapDTO> listDriverTrucks() {
+            return truckService.findAll().stream()
+                    .map(TruckMapDTO::from)
+                    .collect(Collectors.toList());
+        }
+
+        public record TruckMapDTO(Long id, String plate, double lat, double lng, Long routeId) {
+            public static TruckMapDTO from(Truck t) {
+                double lat = 0;
+                double lng = 0;
+                Long routeId = null;
+
+                if (t.getCurrentLatitude() != null && t.getCurrentLongitude() != null) {
+                    lat = t.getCurrentLatitude();
+                    lng = t.getCurrentLongitude();
+                }
+
+                else if (t.getRoute() != null) {
+                    lat = t.getRoute().getDestinationLatitude();
+                    lng = t.getRoute().getDestinationLongitude();
+                    routeId = t.getRoute().getId();
+                }
+
+                return new TruckMapDTO(
+                        t.getId(),
+                        t.getPlate(),
+                        lat,
+                        lng,
+                        routeId
+                );
+            }
+            }
     }
 
 }

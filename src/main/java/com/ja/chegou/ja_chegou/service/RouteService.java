@@ -13,4 +13,6 @@ public interface RouteService {
     void delete(Long id);
 
     List<Route> getRoutesByTruck(Long truckId);
+
+    Route findById(Long id);
 }
