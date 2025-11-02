@@ -42,16 +42,18 @@ public class RouteController {
                 .collect(Collectors.toList());
     }
 
-    public record RouteMapDTO(Long id, String name, List<double[]> coordinates) {
+    public record RouteMapDTO(Long id, String name, String originName, List<double[]> coordinates) {
 
         public static RouteMapDTO from(Route r) {
             double originLat = 0.0;
             double originLng = 0.0;
+            String originName = "Origem desconhecida";
 
             try {
                 if (r.getOrigin() != null) {
                     originLat = r.getOrigin().getLatitude();
                     originLng = r.getOrigin().getLongitude();
+                    originName = r.getOrigin().getName(); // ✅ Nome do centro de origem
                 } else {
                     System.err.println("⚠️  Rota " + r.getId() + " sem DistributionCenter (origem).");
                 }
@@ -62,9 +64,9 @@ public class RouteController {
             double destLat = r.getDestinationLatitude() != null ? r.getDestinationLatitude() : 0.0;
             double destLng = r.getDestinationLongitude() != null ? r.getDestinationLongitude() : 0.0;
 
-            // se alguma coordenada for 0.0, evita chamar o OSRM
+            // Se alguma coordenada for 0.0, evita chamar o OSRM
             if (originLat == 0.0 && originLng == 0.0 && destLat == 0.0 && destLng == 0.0) {
-                return new RouteMapDTO(r.getId(), r.getDestinationAddress(), List.of());
+                return new RouteMapDTO(r.getId(), r.getDestinationAddress(), originName, List.of());
             }
 
             try {
@@ -86,12 +88,13 @@ public class RouteController {
                         .map(c -> new double[]{c.get(1), c.get(0)})
                         .toList();
 
-                return new RouteMapDTO(r.getId(), r.getDestinationAddress(), coords);
+                return new RouteMapDTO(r.getId(), r.getDestinationAddress(), originName, coords);
 
             } catch (Exception ex) {
                 System.err.println("Falha ao gerar rota OSRM para " + r.getDestinationAddress() + ": " + ex.getMessage());
-                return new RouteMapDTO(r.getId(), r.getDestinationAddress(), List.of());
+                return new RouteMapDTO(r.getId(), r.getDestinationAddress(), originName, List.of());
             }
         }
     }
+
 }

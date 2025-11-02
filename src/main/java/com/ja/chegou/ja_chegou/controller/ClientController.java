@@ -11,7 +11,7 @@ public class ClientController {
 
     @GetMapping({"/","/mainPage"})
     public String homePage(Model model, Principal principal) {
-        model.addAttribute("logged", principal != null);
+        model.addAttribute("logged", true);
         return "mainPage";
     }
 }

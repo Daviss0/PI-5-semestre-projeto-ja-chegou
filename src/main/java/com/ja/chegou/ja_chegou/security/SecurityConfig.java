@@ -31,24 +31,29 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
+                        // 🔓 Páginas públicas (sem necessidade de login)
                         .requestMatchers(
                                 "/", "/mainPage",
                                 "/manifest.webmanifest",
                                 "/sw.js",
                                 "/icons/**",
-                                "/css/**", "/js/**", "/images/**", "/webjars/**"
+                                "/css/**", "/js/**", "/images/**", "/webjars/**",
+                                "/login", "/cadastro",
+                                "/api/routes/public",
+                                "/api/trucks/public/**",
+                                "/api/osrm/**"
                         ).permitAll()
 
-                        .requestMatchers("/login", "/cadastro").permitAll()
-
-                        .requestMatchers("/admin/login_adm", "/admin/register", "/h2-console/**").permitAll()
-                        .requestMatchers("/api/trucks/public/**").permitAll()
-                        // OBS: hoje você exige ADMIN também para /driver/** e /user/**.
-                        // Se quiser papéis separados, troque para .hasRole("DRIVER") / .hasRole("USER")
+                        // 🔐 Rotas administrativas (exigem login de ADMIN)
+                        .requestMatchers(
+                                "/admin/login_adm", "/admin/register", "/h2-console/**"
+                        ).permitAll()
                         .requestMatchers("/admin/**", "/driver/**", "/user/**").hasRole("ADMIN")
 
+                        // Qualquer outra rota precisa de autenticação
                         .anyRequest().authenticated()
                 )
+                // ⚙️ Configuração de login administrativo
                 .formLogin(form -> form
                         .loginPage("/admin/login_adm")
                         .loginProcessingUrl("/admin/login")
