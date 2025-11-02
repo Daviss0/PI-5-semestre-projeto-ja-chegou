@@ -1,73 +1,77 @@
+// mobile-app/app/_layout.tsx
 import React from "react";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AuthProvider, useAuth } from "../context/AuthContext";
+import { ActivityIndicator, View } from "react-native";
 
-export default function Layout() {
-    const router = useRouter();
+function TabsLayout() {
+    const { user, loading } = useAuth();
 
-    // 🔒 Verifica login apenas quando o usuário tenta abrir o Perfil
-    const handleProfilePress = async () => {
-        const user = await AsyncStorage.getItem("user");
-        if (!user) {
-            router.push("/Login"); // vai para login se não estiver logado
-        } else {
-            router.push("/Profile");
-        }
-    };
+    if (loading) {
+        return (
+            <View style={{ flex: 1, backgroundColor: "#0E0E10", justifyContent: "center", alignItems: "center" }}>
+                <ActivityIndicator size="large" color="#fff" />
+            </View>
+        );
+    }
 
     return (
         <Tabs
             screenOptions={{
-                headerShown: false,
-                tabBarShowLabel: true,
-                tabBarActiveTintColor: "#fff",
-                tabBarInactiveTintColor: "#777",
                 tabBarStyle: {
                     backgroundColor: "#0E0E10",
                     borderTopColor: "#222",
-                    height: 70,
-                    paddingBottom: 8,
-                    paddingTop: 8,
+                    height: 65,
                 },
-                tabBarLabelStyle: {
-                    fontSize: 13,
-                    fontWeight: "600",
-                },
+                tabBarActiveTintColor: "#fff",
+                tabBarInactiveTintColor: "#777",
+                headerShown: false,
             }}
         >
-            {/* 🌍 Aba do mapa */}
+            {/* 🔹 Mapa (sempre visível) */}
             <Tabs.Screen
                 name="MainPage"
                 options={{
                     title: "Mapa",
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="map-outline" color={color} size={size + 2} />
+                        <Ionicons name="map-outline" size={size} color={color} />
                     ),
                 }}
             />
 
-            {/* 👤 Aba do perfil */}
+            {/* 🔹 Perfil (leva ao Login se deslogado) */}
             <Tabs.Screen
                 name="Profile"
-                listeners={{
-                    tabPress: (e) => {
-                        e.preventDefault();
-                        handleProfilePress();
-                    },
-                }}
                 options={{
                     title: "Perfil",
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="person-circle-outline" color={color} size={size + 2} />
+                        <Ionicons name="person-outline" size={size} color={color} />
                     ),
                 }}
+                listeners={({ navigation }) => ({
+                    tabPress: (e) => {
+                        if (!user) {
+                            e.preventDefault();
+                            navigation.navigate("Login");
+                        }
+                    },
+                })}
             />
 
-            {/* ❌ Oculta telas extras da barra */}
-            <Tabs.Screen name="Login" options={{ href: null }} />
-            <Tabs.Screen name="Register" options={{ href: null }} />
-            <Tabs.Screen name="index" options={{ href: null }} />
+            {/* Telas ocultas (fora da barra) */}
+            <Tabs.Screen name="Login" options={{ href: null, headerShown: false }} />
+            <Tabs.Screen name="Register" options={{ href: null, headerShown: false }} />
+            <Tabs.Screen name="RegisterDetails" options={{ href: null, headerShown: false }} />
+            <Tabs.Screen name="index" options={{ href: null, headerShown: false }} />
         </Tabs>
+    );
+}
+
+export default function Layout() {
+    return (
+        <AuthProvider>
+            <TabsLayout />
+        </AuthProvider>
     );
 }

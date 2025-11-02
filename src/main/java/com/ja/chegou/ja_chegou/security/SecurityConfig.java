@@ -18,7 +18,7 @@ public class SecurityConfig {
     private final CustomUserDetailsService customUserDetailsService;
 
     @Autowired
-    private CustomAuthenticationFailureHandler customAuthenticationFailureHandler;
+    CustomAuthenticationFailureHandler customAuthenticationFailureHandler;
 
     public SecurityConfig(CustomUserDetailsService userDetailsService,
                           CustomAuthenticationFailureHandler customAuthenticationFailureHandler) {
@@ -26,16 +26,36 @@ public class SecurityConfig {
         this.customAuthenticationFailureHandler = customAuthenticationFailureHandler;
     }
 
-    // 🔹 1️⃣ Segurança ADMIN — tem prioridade mais alta
     @Bean
-    @Order(1)
-    public SecurityFilterChain adminSecurity(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/admin/**", "/driver/**", "/user/**") // Só afeta essas rotas
+                .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
+                        // 🔓 Endpoints públicos da API (liberados para o app Expo)
+                        .requestMatchers("/api/collections/**").permitAll()
+                        .requestMatchers("/api/osrm/**").permitAll()
+                        .requestMatchers("/api/routes/public").permitAll()
+                        .requestMatchers("/api/trucks/public/**").permitAll()
+
+                        // 🔓 Recursos estáticos e páginas públicas
+                        .requestMatchers(
+                                "/", "/mainPage",
+                                "/manifest.webmanifest",
+                                "/sw.js",
+                                "/icons/**",
+                                "/css/**", "/js/**", "/images/**", "/webjars/**",
+                                "/login", "/cadastro"
+                        ).permitAll()
+
+                        // 🔐 Login administrativo e console
                         .requestMatchers("/admin/login_adm", "/admin/register", "/h2-console/**").permitAll()
-                        .anyRequest().hasRole("ADMIN")
+                        .requestMatchers("/admin/**", "/driver/**", "/user/**").hasRole("ADMIN")
+
+                        // 🚫 Tudo o resto precisa de login
+                        .anyRequest().authenticated()
                 )
+                // ⚙️ Configuração de login administrativo (mantida)
                 .formLogin(form -> form
                         .loginPage("/admin/login_adm")
                         .loginProcessingUrl("/admin/login")
@@ -43,41 +63,11 @@ public class SecurityConfig {
                         .failureHandler(customAuthenticationFailureHandler)
                         .permitAll()
                 )
-                .logout(logout -> logout
-                        .logoutUrl("/admin/logout")
-                        .logoutSuccessUrl("/admin/login_adm?logout")
-                        .permitAll()
-                )
-                .csrf(csrf -> csrf.disable())
-                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-                .userDetailsService(customUserDetailsService);
+                .logout(logout -> logout.permitAll());
 
         return http.build();
     }
 
-    // 🔹 2️⃣ Segurança PÚBLICA / CLIENTE — prioridade menor (fallback)
-    @Bean
-    @Order(2)
-    public SecurityFilterChain publicSecurity(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/", "/mainPage",
-                                "/client/login", "/register", "/registerClient",
-                                "/manifest.webmanifest", "/sw.js",
-                                "/icons/**", "/css/**", "/js/**", "/images/**", "/webjars/**",
-                                "/api/clients/register", "/api/clients/login",
-                                "/api/collections/**", "/api/osrm/**", "/api/routes/public", "/api/trucks/public/**"
-                        ).permitAll()
-                        .anyRequest().permitAll() // tudo mais liberado pro público
-                )
-                .formLogin(form -> form.disable()) // 🚫 Desativa o formLogin global (sem redirecionar)
-                .logout(logout -> logout.disable()); // 🚫 sem logout automático via Spring
-
-        return http.build();
-    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {

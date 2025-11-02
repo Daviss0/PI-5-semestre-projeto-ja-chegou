@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
     View,
     Text,
@@ -8,7 +8,7 @@ import {
     FlatList,
     Keyboard,
     Animated,
-    Platform,
+    Easing,
 } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +24,8 @@ type RouteData = {
 
 export default function MainPage() {
     const mapRef = useRef<MapView>(null);
+    const inputRef = useRef<TextInput>(null);
+
     const [region, setRegion] = useState({
         latitude: -23.55052,
         longitude: -46.633308,
@@ -35,65 +37,62 @@ export default function MainPage() {
     const [address, setAddress] = useState<string | null>(null);
     const [searched, setSearched] = useState(false);
     const [routes, setRoutes] = useState<RouteData[]>([]);
-    const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
-        null
-    );
+    const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
-    // controla a visibilidade do painel
+    // animações do painel de rotas
+    const fadeAnim = useRef(new Animated.Value(1)).current;
+    const slideAnim = useRef(new Animated.Value(0)).current;
     const [isVisible, setIsVisible] = useState(true);
-    const fadeAnim = useRef(new Animated.Value(1)).current; // opacidade
-    const translateAnim = useRef(new Animated.Value(0)).current; // movimento vertical
 
     const toggleRoutes = () => {
+        Keyboard.dismiss();
+        inputRef.current?.blur();
+
         const newVisible = !isVisible;
         setIsVisible(newVisible);
 
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: newVisible ? 1 : 0,
-                duration: 350,
+                duration: 400,
+                easing: Easing.out(Easing.ease),
                 useNativeDriver: true,
             }),
-            Animated.timing(translateAnim, {
-                toValue: newVisible ? 0 : 100,
-                duration: 350,
+            Animated.timing(slideAnim, {
+                toValue: newVisible ? 0 : 200,
+                duration: 450,
+                easing: Easing.inOut(Easing.cubic),
                 useNativeDriver: true,
             }),
         ]).start();
     };
 
-    // anima a caixa de busca quando o teclado aparece
-    const [searchBoxY] = useState(new Animated.Value(50));
+    // animação suave de fechamento do teclado
+    const smoothKeyboardClose = () => {
+        Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 220,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+        }).start();
+        setTimeout(() => {
+            Keyboard.dismiss();
+        }, 150); // pequeno delay que cria a sensação de fade
+    };
+
+    // garante transição leve entre abrir/fechar teclado
     useEffect(() => {
-        const showSub = Keyboard.addListener("keyboardWillShow", () => {
-            Animated.timing(searchBoxY, {
-                toValue: Platform.OS === "ios" ? 10 : 0,
-                duration: 250,
-                useNativeDriver: false,
-            }).start();
-        });
-        const hideSub = Keyboard.addListener("keyboardWillHide", () => {
-            Animated.timing(searchBoxY, {
-                toValue: 50,
-                duration: 250,
-                useNativeDriver: false,
-            }).start();
-        });
-        return () => {
-            showSub.remove();
-            hideSub.remove();
-        };
+        const hideSub = Keyboard.addListener("keyboardWillHide", smoothKeyboardClose);
+        return () => hideSub.remove();
     }, []);
 
-    // busca por endereço (OpenStreetMap)
+    // busca por endereço
     const handleSearch = async () => {
         if (!query) return;
-        Keyboard.dismiss();
+        smoothKeyboardClose();
         try {
             const res = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(
-                    query
-                )}`
+                `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}`
             );
             const data = await res.json();
             if (data.length === 0) {
@@ -114,7 +113,6 @@ export default function MainPage() {
             setAddress(`${street}, ${bairro}${cep}`);
             setUserLocation({ latitude, longitude });
 
-            // centraliza o mapa
             mapRef.current?.animateToRegion(
                 {
                     latitude: latitude - 0.002,
@@ -170,6 +168,22 @@ export default function MainPage() {
             ];
             setRoutes(fakeRoutes);
             setSearched(true);
+
+            // 👇 garante que o painel volte visível a cada nova busca
+            setIsVisible(true);
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 350,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: 400,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+            ]).start();
         } catch (err) {
             console.error("Erro ao buscar local:", err);
             setAddress("Erro ao buscar endereço");
@@ -182,7 +196,7 @@ export default function MainPage() {
         setRoutes([]);
         setSearched(false);
         setUserLocation(null);
-        Keyboard.dismiss();
+        smoothKeyboardClose();
         setRegion({
             latitude: -23.55052,
             longitude: -46.633308,
@@ -212,7 +226,7 @@ export default function MainPage() {
                 ref={mapRef}
                 style={styles.map}
                 region={region}
-                onPress={toggleRoutes} // 👈 clique no mapa para ocultar ou mostrar o painel
+                onPress={toggleRoutes}
             >
                 {searched &&
                     routes.map((r) => (
@@ -223,11 +237,12 @@ export default function MainPage() {
                 )}
             </MapView>
 
-            {/* 🔍 Caixa de busca */}
+            {/* 🔍 Caixa de busca fixa */}
             <View style={styles.fixedSearchBox}>
                 <View style={styles.searchRow}>
                     <Ionicons name="search" size={20} color="#aaa" />
                     <TextInput
+                        ref={inputRef}
                         style={styles.input}
                         placeholder="Digite o endereço"
                         placeholderTextColor="#888"
@@ -256,10 +271,10 @@ export default function MainPage() {
                         styles.bottomSheet,
                         {
                             opacity: fadeAnim,
-                            transform: [{ translateY: translateAnim }],
+                            transform: [{ translateY: slideAnim }],
                         },
                     ]}
-                    pointerEvents={isVisible ? "auto" : "none"} // bloqueia interação quando invisível
+                    pointerEvents={isVisible ? "auto" : "none"}
                 >
                     <FlatList
                         data={routes}
