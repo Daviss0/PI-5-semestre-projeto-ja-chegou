@@ -1,19 +1,31 @@
-import { View, Text, Button, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
+import { useEffect } from "react";
+import { useRouter, useRootNavigationState } from "expo-router";
+import { View, ActivityIndicator } from "react-native";
 
 export default function Index() {
     const router = useRouter();
+    const navigationState = useRootNavigationState();
+
+    useEffect(() => {
+        if (!navigationState?.key) return;
+
+        const timeout = setTimeout(() => {
+            router.replace("/MainPage");
+        }, 300);
+
+        return () => clearTimeout(timeout);
+    }, [navigationState?.key]);
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.text}>🚛 Bem-vindo ao JÁ CHEGOU</Text>
-            <Button title="Entrar" onPress={() => router.push("/MainPage")} />
-            <Button title="Cadastrar" onPress={() => router.push("/Register")} />
+        <View
+            style={{
+                flex: 1,
+                backgroundColor: "#0E0E10",
+                alignItems: "center",
+                justifyContent: "center",
+            }}
+        >
+            <ActivityIndicator size="large" color="#fff" />
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: "center", alignItems: "center" },
-    text: { fontSize: 18, fontWeight: "bold", marginBottom: 20 },
-});
