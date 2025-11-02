@@ -5,14 +5,15 @@ import {
     StyleSheet,
     TouchableOpacity,
     ScrollView,
-    Image,
     Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 
 export default function Profile() {
     const router = useRouter();
+    const { logout } = useAuth(); // 🔹 integra com o contexto global
     const [client, setClient] = useState<any>(null);
 
     useEffect(() => {
@@ -22,7 +23,6 @@ export default function Profile() {
                 if (storedClient) {
                     setClient(JSON.parse(storedClient));
                 } else {
-                    Alert.alert("Sessão expirada", "Por favor, faça login novamente.");
                     router.replace("/Login");
                 }
             } catch (err) {
@@ -32,8 +32,22 @@ export default function Profile() {
     }, []);
 
     const handleLogout = async () => {
-        await AsyncStorage.removeItem("clientData");
-        router.replace("/Login");
+        Alert.alert("Sair", "Deseja realmente sair da conta?", [
+            { text: "Cancelar", style: "cancel" },
+            {
+                text: "Sair",
+                style: "destructive",
+                onPress: async () => {
+                    try {
+                        await AsyncStorage.removeItem("clientData");
+                        await logout(); // 🔹 limpa estado global
+                        router.replace("/Login");
+                    } catch (err) {
+                        console.error("Erro ao deslogar:", err);
+                    }
+                },
+            },
+        ]);
     };
 
     if (!client) {
