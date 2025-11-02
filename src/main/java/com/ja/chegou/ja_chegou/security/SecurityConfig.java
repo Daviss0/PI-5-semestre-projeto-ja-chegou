@@ -31,29 +31,30 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
-                        // 🔓 Páginas públicas (sem necessidade de login)
+                        // 🔓 Endpoints públicos da API (liberados para o app Expo)
+                        .requestMatchers("/api/collections/**").permitAll()
+                        .requestMatchers("/api/osrm/**").permitAll()
+                        .requestMatchers("/api/routes/public").permitAll()
+                        .requestMatchers("/api/trucks/public/**").permitAll()
+
+                        // 🔓 Recursos estáticos e páginas públicas
                         .requestMatchers(
                                 "/", "/mainPage",
                                 "/manifest.webmanifest",
                                 "/sw.js",
                                 "/icons/**",
                                 "/css/**", "/js/**", "/images/**", "/webjars/**",
-                                "/login", "/cadastro",
-                                "/api/routes/public",
-                                "/api/trucks/public/**",
-                                "/api/osrm/**"
+                                "/login", "/cadastro"
                         ).permitAll()
 
-                        // 🔐 Rotas administrativas (exigem login de ADMIN)
-                        .requestMatchers(
-                                "/admin/login_adm", "/admin/register", "/h2-console/**"
-                        ).permitAll()
+                        // 🔐 Login administrativo e console
+                        .requestMatchers("/admin/login_adm", "/admin/register", "/h2-console/**").permitAll()
                         .requestMatchers("/admin/**", "/driver/**", "/user/**").hasRole("ADMIN")
 
-                        // Qualquer outra rota precisa de autenticação
+                        // 🚫 Tudo o resto precisa de login
                         .anyRequest().authenticated()
                 )
-                // ⚙️ Configuração de login administrativo
+                // ⚙️ Configuração de login administrativo (mantida)
                 .formLogin(form -> form
                         .loginPage("/admin/login_adm")
                         .loginProcessingUrl("/admin/login")
@@ -65,6 +66,7 @@ public class SecurityConfig {
 
         return http.build();
     }
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {
