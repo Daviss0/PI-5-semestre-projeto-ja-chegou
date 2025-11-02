@@ -11,7 +11,22 @@ public class ClientController {
 
     @GetMapping({"/","/mainPage"})
     public String homePage(Model model, Principal principal) {
-        model.addAttribute("logged", true);
+        model.addAttribute("logged", false);
         return "mainPage";
+    }
+
+    @GetMapping("/login")
+    public String login () {
+        return "login";
+    }
+
+    @GetMapping("/register")
+    public String register() {
+        return "register";
+    }
+
+    @GetMapping("/profile")
+    public String profile() {
+        return "profile";
     }
 }
