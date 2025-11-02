@@ -54,8 +54,8 @@
     <button class="btn grow" id="btnShowRoutes" onclick="showRoutes()">Ver rotas disponíveis</button>
 
     <!-- botões extras se NÃO logado -->
-    <button class="btn grow" th:if="${!logged}" onclick="location.href='/login'">Entrar</button>
-    <button class="btn grow" th:if="${!logged}" onclick="location.href='/register'">Cadastrar</button>
+    <button class="btn btn-success" onclick="location.href='/client/login'">Entrar</button>
+      <button class="btn grow" th:if="${!logged}" onclick="location.href='/register'">Cadastrar</button>
 
     <!-- botões extras se logado -->
     <button class="btn grow" th:if="${logged}" onclick="location.href='/me'">Minha conta</button>
@@ -67,7 +67,7 @@
 <nav class="bottomnav">
   <button class="btn grow" onclick="location.href='/'">Home</button>
   <button class="btn grow" th:if="${!logged}" onclick="location.href='/login'">Entrar</button>
-  <button class="btn grow" th:if="${!logged}" onclick="location.href='/cadastro'">Cadastrar</button>
+  <button class="btn grow" th:if="${!logged}" onclick="location.href='/register'">Cadastrar</button>
   <button class="btn grow" th:if="${logged}"  onclick="location.href='/me'">Minha conta</button>
 </nav>
 

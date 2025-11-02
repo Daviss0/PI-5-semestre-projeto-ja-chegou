@@ -1,6 +1,7 @@
 package com.ja.chegou.ja_chegou.entity;
 
 import com.ja.chegou.ja_chegou.enumerated.Role;
+import com.ja.chegou.ja_chegou.validation.ValidCPF;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 
@@ -18,10 +19,10 @@ public class Client {
     @Size(min = 3, max = 80, message = "O nome deve ter entre 3 e 80 caracteres.")
     private String name;
 
-    @NotBlank(message = "O CPF é obrigatório.")
-    @Pattern(regexp = "\\d{11}", message = "O CPF deve conter 11 dígitos numéricos.")
+    @ValidCPF
     @Column(unique = true)
     private String cpf;
+
 
     @NotBlank(message = "O e-mail é obrigatório.")
     @Email(message = "Formato de e-mail inválido.")
@@ -36,6 +37,7 @@ public class Client {
     private String phone;
 
     @Past(message = "A data de nascimento deve estar no passado.")
+    @NotNull(message = "A data de nascimento é obrigatória.")
     private LocalDate birthDate;
 
     //endereço

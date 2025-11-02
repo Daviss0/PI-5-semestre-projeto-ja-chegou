@@ -21,7 +21,7 @@
 
             <div class="col-md-3 mb-3">
                 <label>CPF</label>
-                <input type="text" id="cpf" class="form-control" maxlength="11" required>
+                <input type="text" id="cpf" name="cpf" class="form-control" maxlength="14" placeholder="000.000.000-00" required>
             </div>
 
             <div class="col-md-3 mb-3">
@@ -51,7 +51,7 @@
 
             <div class="col-md-3 mb-3">
                 <label>CEP</label>
-                <input type="text" id="cep" class="form-control" maxlength="8" required>
+                <input type="text" id="cep" name="cep" class="form-control" maxlength="9" placeholder="00000-000" required>
             </div>
 
             <div class="col-md-6 mb-3">
@@ -87,7 +87,7 @@
 
         <div class="text-center mt-4">
             <button type="submit" class="btn btn-success px-4">Cadastrar</button>
-            <a href="/login" class="btn btn-outline-secondary ms-2">Já tenho conta</a>
+            <a href="/mainPage" class="btn btn-outline-secondary ms-2">Voltar</a>
         </div>
 
         <div id="msg" class="mt-4 text-center"></div>
@@ -95,56 +95,93 @@
 </div>
 
 <script>
-    // 🔹 Auto-preenche endereço via API ViaCEP
-    document.getElementById('cep').addEventListener('blur', async () => {
-        const cep = document.getElementById('cep').value.replace(/\D/g, '');
-        if (cep.length === 8) {
-            const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-            const data = await res.json();
-            if (!data.erro) {
-                document.getElementById('logradouro').value = data.logradouro || '';
-                document.getElementById('hood').value = data.bairro || '';
-                document.getElementById('city').value = data.localidade || '';
-                document.getElementById('state').value = data.uf || '';
-            }
-        }
-    });
+    document.addEventListener("DOMContentLoaded", () => {
 
-    // 🔹 Envio dos dados para o backend
-    document.getElementById('registerForm').addEventListener('submit', async e => {
-        e.preventDefault();
-        const data = {
-            name: name.value,
-            cpf: cpf.value,
-            email: email.value,
-            password: password.value,
-            phone: phone.value,
-            birthDate: birthDate.value,
-            cep: cep.value,
-            logradouro: logradouro.value,
-            number: number.value,
-            complement: complement.value,
-            hood: hood.value,
-            city: city.value,
-            state: state.value
-        };
-
-        const res = await fetch('/api/clients/register', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
+        const cpfInput = document.getElementById('cpf');
+        cpfInput.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, ''); // remove tudo que não é número
+            if (v.length > 11) v = v.slice(0, 11);    // limita a 11 dígitos
+            v = v.replace(/^(\d{3})(\d)/, '$1.$2')
+                .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+                .replace(/\.(\d{3})(\d)/, '.$1-$2');
+            e.target.value = v;
         });
 
-        const msgEl = document.getElementById('msg');
-        if (res.ok) {
-            msgEl.innerHTML = `<div class="alert alert-success">Cadastro realizado com sucesso!</div>`;
-            setTimeout(() => window.location.href = '/login', 1500);
-        } else {
-            const err = await res.text();
-            msgEl.innerHTML = `<div class="alert alert-danger">${err}</div>`;
-        }
+        const cepInput = document.getElementById('cep');
+        cepInput.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, ''); // remove não numéricos
+            if (v.length > 8) v = v.slice(0, 8);      // limita a 8 dígitos
+            if (v.length > 5) v = v.replace(/(\d{5})(\d)/, '$1-$2'); // insere traço
+            e.target.value = v;
+        });
+
+        cepInput.addEventListener('blur', async () => {
+            const cep = cepInput.value.replace(/\D/g, ''); // remove traço antes da consulta
+            if (cep.length === 8) {
+                try {
+                    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    const data = await res.json();
+
+                    if (!data.erro) {
+                        document.getElementById('logradouro').value = data.logradouro || '';
+                        document.getElementById('hood').value = data.bairro || '';
+                        document.getElementById('city').value = data.localidade || '';
+                        document.getElementById('state').value = data.uf || '';
+                    } else {
+                        alert("CEP não encontrado.");
+                    }
+                } catch (err) {
+                    console.error("Erro ao consultar ViaCEP:", err);
+                }
+            } else if (cep.length > 0) {
+                alert("CEP deve ter 8 dígitos numéricos.");
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async e => {
+            e.preventDefault();
+
+            const cpfLimpo = cpfInput.value.replace(/\D/g, '');
+            const cepLimpo = cepInput.value.replace(/\D/g, ''); // remove o traço do CEP
+
+            const data = {
+                name: document.getElementById('name').value.trim(),
+                cpf: cpfLimpo,
+                email: document.getElementById('email').value.trim(),
+                password: document.getElementById('password').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                birthDate: document.getElementById('birthDate').value,
+                cep: cepLimpo,
+                logradouro: document.getElementById('logradouro').value.trim(),
+                number: document.getElementById('number').value.trim(),
+                complement: document.getElementById('complement').value.trim(),
+                hood: document.getElementById('hood').value.trim(),
+                city: document.getElementById('city').value.trim(),
+                state: document.getElementById('state').value.trim()
+            };
+
+            console.log("Enviando dados:", data); // debug opcional
+
+            const res = await fetch('/api/clients/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            const msgEl = document.getElementById('msg');
+            if (res.ok) {
+                msgEl.innerHTML = `<div class="alert alert-success">Cadastro realizado com sucesso!</div>`;
+                setTimeout(() => window.location.href = '/login', 1500);
+            } else {
+                const err = await res.text();
+                msgEl.innerHTML = `<div class="alert alert-danger">${err}</div>`;
+            }
+        });
     });
 </script>
+
+
+
 
 </body>
 </html>

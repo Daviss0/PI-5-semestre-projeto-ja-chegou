@@ -15,14 +15,15 @@ public class ClientController {
         return "mainPage";
     }
 
-    @GetMapping("/login")
-    public String login () {
-        return "login";
+    @GetMapping("/client/login")
+    public String login() {
+        return "login_client";
     }
+
 
     @GetMapping("/register")
     public String register() {
-        return "register";
+        return "registerClient";
     }
 
     @GetMapping("/profile")

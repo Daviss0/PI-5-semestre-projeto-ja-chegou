@@ -42,6 +42,7 @@ public class ClientServiceImpl implements  ClientService{
     public Optional<Client> findById(Long id) {
         return clientRepository.findById(id);
     }
+
     @Override
     public void delete(Long id) {
         if (!clientRepository.existsById(id)) {
@@ -49,4 +50,49 @@ public class ClientServiceImpl implements  ClientService{
         }
         clientRepository.deleteById(id);
     }
+
+    @Override
+    public Optional<Client> findByEmail(String email) {
+        return clientRepository.findByEmail(email);
+    }
+
+    @Override
+    public Client getByEmail(String email) {
+        return clientRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado para o e-mail informado."));
+    }
+
+    @Override
+    public Client update(Client client) {
+        if (client.getId() == null) {
+            throw new RuntimeException("ID do cliente não pode ser nulo para atualização.");
+        }
+
+        Optional<Client> existingOpt = clientRepository.findById(client.getId());
+        if (existingOpt.isEmpty()) {
+            throw new RuntimeException("Cliente não encontrado para atualização.");
+        }
+
+        Client existing = existingOpt.get();
+        existing.setName(client.getName());
+        existing.setCpf(client.getCpf());
+        existing.setEmail(client.getEmail());
+        existing.setPhone(client.getPhone());
+        existing.setCep(client.getCep());
+        existing.setLogradouro(client.getLogradouro());
+        existing.setNumber(client.getNumber());
+        existing.setComplement(client.getComplement());
+        existing.setHood(client.getHood());
+        existing.setCity(client.getCity());
+        existing.setState(client.getState());
+        existing.setLastAcess(client.getLastAcess());
+        existing.setActive(client.getActive());
+
+        if (client.getPassword() != null && !client.getPassword().isBlank()) {
+            existing.setPassword(client.getPassword());
+        }
+
+        return clientRepository.save(existing);
+    }
+
 }

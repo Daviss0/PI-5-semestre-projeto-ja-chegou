@@ -12,4 +12,10 @@ public interface ClientService {
     Optional<Client> findById(Long id);
 
     void delete(Long id);
+
+    Optional<Client> findByEmail(String email);
+
+    Client getByEmail(String email);
+
+    Client update(Client client);
 }
