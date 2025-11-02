@@ -1,76 +1,105 @@
+// mobile-app/app/Login.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    StyleSheet,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+} from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
     const router = useRouter();
+    const { login } = useAuth();
+
+    const [email, setEmail] = useState("");
+    const [senha, setSenha] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert("Erro", "Por favor, preencha todos os campos.");
+        if (!email || !senha) {
+            Alert.alert("Atenção", "Preencha e-mail e senha.");
             return;
         }
 
-        // Simulação de login
-        if (email === "teste@email.com" && password === "1234") {
-            await AsyncStorage.setItem("user", JSON.stringify({ email }));
-            router.replace("/MainPage"); // Vai direto pro mapa
-        } else {
-            Alert.alert("Erro", "Credenciais inválidas. Tente novamente.");
+        try {
+            setLoading(true);
+            const response = await fetch("http://192.168.1.107:8080/api/clients/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, senha }),
+            });
+
+            if (response.ok) {
+                const client = await response.json();
+                await login(client); // usa o contexto global
+                Alert.alert("Bem-vindo", `Olá, ${client.name}!`, [
+                    { text: "OK", onPress: () => router.replace("/Profile") },
+                ]);
+            } else if (response.status === 401) {
+                const msg = await response.text();
+                Alert.alert("Erro de login", msg || "Credenciais inválidas.");
+            } else {
+                Alert.alert("Erro", "Falha ao realizar login.");
+            }
+        } catch (err) {
+            console.error(err);
+            Alert.alert("Erro", "Não foi possível conectar ao servidor.");
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleCreateAccount = () => {
-        router.push("/Register");
-    };
-
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Bem-vindo de volta!</Text>
-            <Text style={styles.subtitle}>Entre com sua conta para continuar</Text>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+            <View style={styles.inner}>
+                <Text style={styles.title}>Bem-vindo de volta!</Text>
+                <Text style={styles.subtitle}>Faça login para continuar</Text>
 
-            <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#888"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-            />
+                <TextInput
+                    style={styles.input}
+                    placeholder="email@dominio.com"
+                    placeholderTextColor="#777"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    value={email}
+                    onChangeText={setEmail}
+                />
 
-            <TextInput
-                style={styles.input}
-                placeholder="Senha"
-                placeholderTextColor="#888"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-            />
+                <TextInput
+                    style={styles.input}
+                    placeholder="Senha"
+                    placeholderTextColor="#777"
+                    secureTextEntry
+                    value={senha}
+                    onChangeText={setSenha}
+                />
 
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                <Text style={styles.buttonText}>Entrar</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.button, loading && { opacity: 0.6 }]}
+                    onPress={handleLogin}
+                    disabled={loading}
+                >
+                    <Text style={styles.buttonText}>
+                        {loading ? "Entrando..." : "Entrar"}
+                    </Text>
+                </TouchableOpacity>
 
-            <Text style={styles.orText}>ou</Text>
-
-            <TouchableOpacity style={styles.googleButton}>
-                <Text style={styles.googleText}>Continuar com Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.appleButton}>
-                <Text style={styles.appleText}>Continuar com Apple</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={handleCreateAccount}>
-                <Text style={styles.registerText}>
-                    Não tem uma conta? <Text style={styles.link}>Criar conta</Text>
-                </Text>
-            </TouchableOpacity>
-        </View>
+                <TouchableOpacity onPress={() => router.push("/Register")}>
+                    <Text style={styles.linkText}>
+                        Não tem uma conta? <Text style={styles.linkStrong}>Crie agora</Text>
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -78,82 +107,55 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#0E0E10",
-        alignItems: "center",
         justifyContent: "center",
-        paddingHorizontal: 25,
+        paddingHorizontal: 20,
+    },
+    inner: {
+        backgroundColor: "#0E0E10",
+        paddingVertical: 40,
     },
     title: {
-        color: "#fff",
-        fontSize: 28,
-        fontWeight: "700",
-        marginBottom: 8,
+        color: "#FFF",
+        fontSize: 26,
+        fontWeight: "bold",
+        textAlign: "center",
+        marginBottom: 6,
     },
     subtitle: {
-        color: "#ccc",
+        color: "#999",
         fontSize: 15,
-        marginBottom: 25,
+        textAlign: "center",
+        marginBottom: 30,
     },
     input: {
         backgroundColor: "#1A1A1D",
-        color: "#fff",
-        width: "100%",
-        height: 50,
         borderRadius: 10,
-        paddingHorizontal: 15,
-        marginBottom: 15,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        color: "#FFF",
         fontSize: 16,
+        marginBottom: 14,
     },
     button: {
-        backgroundColor: "#fff",
-        width: "100%",
-        height: 50,
+        backgroundColor: "#FFF",
         borderRadius: 10,
+        paddingVertical: 14,
         alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 20,
+        marginTop: 10,
     },
     buttonText: {
         color: "#000",
+        fontWeight: "bold",
         fontSize: 16,
-        fontWeight: "600",
     },
-    orText: {
-        color: "#777",
-        marginBottom: 20,
+    linkText: {
+        color: "#AAA",
+        textAlign: "center",
+        marginTop: 18,
+        fontSize: 15,
     },
-    googleButton: {
-        backgroundColor: "#1A1A1D",
-        width: "100%",
-        height: 50,
-        borderRadius: 10,
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 10,
-    },
-    googleText: {
-        color: "#fff",
-        fontWeight: "600",
-    },
-    appleButton: {
-        backgroundColor: "#1A1A1D",
-        width: "100%",
-        height: 50,
-        borderRadius: 10,
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 20,
-    },
-    appleText: {
-        color: "#fff",
-        fontWeight: "600",
-    },
-    registerText: {
-        color: "#888",
-        fontSize: 14,
-        marginTop: 15,
-    },
-    link: {
-        color: "#fff",
-        fontWeight: "600",
+    linkStrong: {
+        color: "#FFF",
+        fontWeight: "bold",
     },
 });

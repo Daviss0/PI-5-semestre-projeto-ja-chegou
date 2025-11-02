@@ -36,6 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/osrm/**").permitAll()
                         .requestMatchers("/api/routes/public").permitAll()
                         .requestMatchers("/api/trucks/public/**").permitAll()
+                        .requestMatchers("/api/clients/**").permitAll()
 
                         // 🔓 Recursos estáticos e páginas públicas
                         .requestMatchers(
