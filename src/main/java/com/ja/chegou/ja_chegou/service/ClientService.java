@@ -18,4 +18,6 @@ public interface ClientService {
     Client getByEmail(String email);
 
     Client update(Client client);
+
+    void updateLastAccess(Long id);
 }

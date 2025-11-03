@@ -97,26 +97,29 @@
 <script>
     document.addEventListener("DOMContentLoaded", () => {
 
+        // 🔹 Máscara CPF
         const cpfInput = document.getElementById('cpf');
         cpfInput.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g, ''); // remove tudo que não é número
-            if (v.length > 11) v = v.slice(0, 11);    // limita a 11 dígitos
+            let v = e.target.value.replace(/\D/g, '');
+            if (v.length > 11) v = v.slice(0, 11);
             v = v.replace(/^(\d{3})(\d)/, '$1.$2')
                 .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
                 .replace(/\.(\d{3})(\d)/, '.$1-$2');
             e.target.value = v;
         });
 
+        // 🔹 Máscara CEP
         const cepInput = document.getElementById('cep');
         cepInput.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g, ''); // remove não numéricos
-            if (v.length > 8) v = v.slice(0, 8);      // limita a 8 dígitos
-            if (v.length > 5) v = v.replace(/(\d{5})(\d)/, '$1-$2'); // insere traço
+            let v = e.target.value.replace(/\D/g, '');
+            if (v.length > 8) v = v.slice(0, 8);
+            if (v.length > 5) v = v.replace(/(\d{5})(\d)/, '$1-$2');
             e.target.value = v;
         });
 
+        // 🔹 Consulta automática do CEP via ViaCEP
         cepInput.addEventListener('blur', async () => {
-            const cep = cepInput.value.replace(/\D/g, ''); // remove traço antes da consulta
+            const cep = cepInput.value.replace(/\D/g, '');
             if (cep.length === 8) {
                 try {
                     const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
@@ -138,11 +141,15 @@
             }
         });
 
-        document.getElementById('registerForm').addEventListener('submit', async e => {
+        // 🔹 Envio do formulário
+        const form = document.getElementById('registerForm');
+        const msgEl = document.getElementById('msg');
+
+        form.addEventListener('submit', async e => {
             e.preventDefault();
 
             const cpfLimpo = cpfInput.value.replace(/\D/g, '');
-            const cepLimpo = cepInput.value.replace(/\D/g, ''); // remove o traço do CEP
+            const cepLimpo = cepInput.value.replace(/\D/g, '');
 
             const data = {
                 name: document.getElementById('name').value.trim(),
@@ -160,28 +167,37 @@
                 state: document.getElementById('state').value.trim()
             };
 
-            console.log("Enviando dados:", data); // debug opcional
+            try {
+                const res = await fetch('/api/clients/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
 
-            const res = await fetch('/api/clients/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
+                if (msgEl) msgEl.innerHTML = ''; // limpa mensagens antigas
 
-            const msgEl = document.getElementById('msg');
-            if (res.ok) {
-                msgEl.innerHTML = `<div class="alert alert-success">Cadastro realizado com sucesso!</div>`;
-                setTimeout(() => window.location.href = '/login', 1500);
-            } else {
-                const err = await res.text();
-                msgEl.innerHTML = `<div class="alert alert-danger">${err}</div>`;
+                if (res.ok) {
+                    if (msgEl) {
+                        msgEl.innerHTML = `
+                        <div class="alert alert-success">
+                            Cadastro realizado com sucesso! Redirecionando para a tela de login...
+                        </div>`;
+                    }
+                    setTimeout(() => window.location.href = '/client/login', 2000);
+                } else {
+                    const err = await res.text();
+                    if (msgEl) {
+                        msgEl.innerHTML = `<div class="alert alert-danger">${err}</div>`;
+                    }
+                }
+            } catch (err) {
+                console.error('Erro no envio do cadastro:', err);
+                if (msgEl) {
+                    msgEl.innerHTML = `<div class="alert alert-danger">Erro ao conectar ao servidor.</div>`;
+                }
             }
         });
     });
 </script>
-
-
-
-
 </body>
 </html>

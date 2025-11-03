@@ -6,13 +6,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
-public class ClientServiceImpl implements  ClientService{
+public class ClientServiceImpl implements ClientService {
 
     @Autowired
     private ClientRepository clientRepository;
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -24,17 +26,24 @@ public class ClientServiceImpl implements  ClientService{
 
         client.setPassword(passwordEncoder.encode(client.getPassword()));
 
+        client.setActive(true);
+        client.setRegisterDate(LocalDateTime.now());
+
         return clientRepository.save(client);
     }
 
     @Override
     public Client login(String email, String typedPassword) {
         var client = clientRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
 
         if (!passwordEncoder.matches(typedPassword, client.getPassword())) {
-            throw new RuntimeException("Senha incorreta");
+            throw new RuntimeException("Senha incorreta.");
         }
+
+        client.setLastAcess(LocalDateTime.now());
+        clientRepository.save(client);
+
         return client;
     }
 
@@ -46,7 +55,7 @@ public class ClientServiceImpl implements  ClientService{
     @Override
     public void delete(Long id) {
         if (!clientRepository.existsById(id)) {
-            throw new RuntimeException("cliente não localizado");
+            throw new RuntimeException("Cliente não localizado.");
         }
         clientRepository.deleteById(id);
     }
@@ -68,12 +77,9 @@ public class ClientServiceImpl implements  ClientService{
             throw new RuntimeException("ID do cliente não pode ser nulo para atualização.");
         }
 
-        Optional<Client> existingOpt = clientRepository.findById(client.getId());
-        if (existingOpt.isEmpty()) {
-            throw new RuntimeException("Cliente não encontrado para atualização.");
-        }
+        Client existing = clientRepository.findById(client.getId())
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado para atualização."));
 
-        Client existing = existingOpt.get();
         existing.setName(client.getName());
         existing.setCpf(client.getCpf());
         existing.setEmail(client.getEmail());
@@ -89,10 +95,23 @@ public class ClientServiceImpl implements  ClientService{
         existing.setActive(client.getActive());
 
         if (client.getPassword() != null && !client.getPassword().isBlank()) {
-            existing.setPassword(client.getPassword());
+            if (!client.getPassword().startsWith("$2a$")) { // já está criptografada?
+                existing.setPassword(passwordEncoder.encode(client.getPassword()));
+            } else {
+                existing.setPassword(client.getPassword());
+            }
         }
 
         return clientRepository.save(existing);
     }
+
+    @Override
+    public void updateLastAccess(Long id) {
+        clientRepository.findById(id).ifPresent(c -> {
+            c.setLastAcess(LocalDateTime.now());
+            clientRepository.save(c);
+        });
+    }
+
 
 }

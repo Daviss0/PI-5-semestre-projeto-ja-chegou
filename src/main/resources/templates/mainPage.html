@@ -17,31 +17,32 @@
     .card{background:#fff;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,.06);padding:16px;margin-bottom:12px}
     .btn{appearance:none;border:0;background:#007f3d;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer;transition:background .2s}
     .btn:hover{background:#006b34}
-    .row{display:flex;gap:8px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
     .grow{flex:1}
     #map{height:420px;width:100%;border-radius:12px}
     .bottomnav{position:sticky;bottom:0;background:#fff;border-top:1px solid #e5e7eb;padding:8px;display:flex;gap:8px;justify-content:space-around}
-    /* --- animação de fade do modal --- */
     .modal.fade .modal-dialog{transform:translateY(-30px);opacity:0;transition:all .35s ease-out}
     .modal.show .modal-dialog{transform:translateY(0);opacity:1}
-    /* --- legenda no mapa --- */
-    .legend{background:#fff;padding:8px;border-radius:10px;font-size:.9em;
-      box-shadow:0 3px 6px rgba(0,0,0,.2);position:absolute;bottom:15px;left:15px;z-index:1000}
+    .legend{background:#fff;padding:8px;border-radius:10px;font-size:.9em;box-shadow:0 3px 6px rgba(0,0,0,.2);position:absolute;bottom:15px;left:15px;z-index:1000}
     .legend div{margin:2px 0}
   </style>
 </head>
+
 <body>
 <header class="topbar">Já Chegou</header>
 
 <main class="container">
+  <!-- Seção de título -->
   <section class="card">
     <h1 style="margin:0">Mapa do Já Chegou</h1>
-    <p style="margin-top:8px" id="statusText" th:text="${logged} ? 'Visualização em tempo real dos caminhões.' : 'Veja as rotas disponíveis e acompanhe o serviço.'"></p>
+    <p style="margin-top:8px" id="statusText">
+      Veja as rotas disponíveis e acompanhe o serviço.
+    </p>
   </section>
 
+  <!-- Seção do mapa -->
   <section class="card">
     <div id="map"></div>
-    <!-- legenda -->
     <div class="legend">
       <div>🟢 Origem</div>
       <div>🔵 Destino</div>
@@ -49,26 +50,29 @@
     </div>
   </section>
 
-  <section class="card row">
-    <!-- botão visível para todos -->
+  <!-- Seção de botões -->
+  <section class="card row text-center">
+    <h3 id="welcomeMsg" class="w-100"></h3>
     <button class="btn grow" id="btnShowRoutes" onclick="showRoutes()">Ver rotas disponíveis</button>
 
-    <!-- botões extras se NÃO logado -->
-    <button class="btn btn-success" onclick="location.href='/client/login'">Entrar</button>
-      <button class="btn grow" th:if="${!logged}" onclick="location.href='/register'">Cadastrar</button>
+    <!-- Botões de visitante -->
+    <button id="btnLogin" class="btn grow" onclick="location.href='/client/login'">Entrar</button>
+    <button id="btnRegister" class="btn grow" onclick="location.href='/register'">Cadastrar</button>
 
-    <!-- botões extras se logado -->
-    <button class="btn grow" th:if="${logged}" onclick="location.href='/me'">Minha conta</button>
-    <button id="btnAlerts" class="btn grow" th:if="${logged}" onclick="enableAlerts()" disabled>Ativar alertas</button>
+    <!-- Botões do cliente -->
+    <button id="btnAccount" class="btn grow" onclick="location.href='/profile'">Minha conta</button>
+    <button id="btnAlerts" class="btn grow" onclick="enableAlerts()" disabled>Ativar alertas</button>
+    <button id="btnLogout" class="btn grow btn-outline-danger" onclick="logout()">Sair</button>
   </section>
-
 </main>
 
+<!-- Barra inferior -->
 <nav class="bottomnav">
   <button class="btn grow" onclick="location.href='/'">Home</button>
-  <button class="btn grow" th:if="${!logged}" onclick="location.href='/login'">Entrar</button>
-  <button class="btn grow" th:if="${!logged}" onclick="location.href='/register'">Cadastrar</button>
-  <button class="btn grow" th:if="${logged}"  onclick="location.href='/me'">Minha conta</button>
+  <button id="navLogin" class="btn grow" onclick="location.href='/client/login'">Entrar</button>
+  <button id="navRegister" class="btn grow" onclick="location.href='/register'">Cadastrar</button>
+  <button id="navAccount" class="btn grow" onclick="location.href='/profile'">Minha conta</button>
+  <button id="navLogout" class="btn grow btn-outline-danger" onclick="logout()">Sair</button>
 </nav>
 
 <!-- Modal de rotas -->
@@ -91,24 +95,89 @@
 
 <script th:inline="javascript">
   const API_BASE = location.origin;
-  const logged = /*[[${logged}]]*/ false;
-  console.log("Página carregada. Usuário logado:", logged);
+  const loggedServer = /*[[${logged}]]*/ false; // vindo do Spring, ignorado se cliente estiver logado no front
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  console.log("Página carregada. Usuário logado (server):", loggedServer);
 
-  const map = L.map('map').setView([-23.55, -46.63], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap' }).addTo(map);
+  const loggedClient = localStorage.getItem("clientLogged") === "true";
+  const clientEmail = localStorage.getItem("clientEmail") || null;
+  const logged = loggedClient || loggedServer;
 
-  const truckIcon = L.icon({ iconUrl:'/icons/icon-192.png', iconSize:[40,40], iconAnchor:[20,20] });
+  console.log("Status de login (localStorage):", loggedClient, "| Email:", clientEmail);
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const welcomeMsg = document.getElementById("welcomeMsg");
+    const btnLogin = document.getElementById("btnLogin");
+    const btnRegister = document.getElementById("btnRegister");
+    const btnAccount = document.getElementById("btnAccount");
+    const btnAlerts = document.getElementById("btnAlerts");
+    const btnLogout = document.getElementById("btnLogout");
+    const btnShow = document.getElementById("btnShowRoutes");
+
+    // Botões do rodapé
+    const navLogin = document.getElementById("navLogin");
+    const navRegister = document.getElementById("navRegister");
+    const navAccount = document.getElementById("navAccount");
+    const navLogout = document.getElementById("navLogout");
+
+    if (logged) {
+      if (welcomeMsg)
+        welcomeMsg.innerText = clientEmail
+                ? `Bem-vindo de volta, ${clientEmail}!`
+                : "Bem-vindo de volta!";
+
+      // Esconde botões de visitante
+      [btnLogin, btnRegister, navLogin, navRegister].forEach(b => b && (b.style.display = "none"));
+      // Mostra botões do cliente
+      [btnAccount, btnAlerts, btnLogout, navAccount, navLogout].forEach(b => b && (b.style.display = "inline-block"));
+
+      if (btnShow) btnShow.removeAttribute("disabled");
+    } else {
+      if (welcomeMsg)
+        welcomeMsg.innerText = "Bem-vindo! Faça login para visualizar rotas e alertas.";
+
+      // Mostra visitante
+      [btnLogin, btnRegister, navLogin, navRegister].forEach(b => b && (b.style.display = "inline-block"));
+      // Esconde cliente
+      [btnAccount, btnAlerts, btnLogout, navAccount, navLogout].forEach(b => b && (b.style.display = "none"));
+
+      if (btnShow) btnShow.setAttribute("disabled", "true");
+    }
+
+    // Evento principal
+    if (btnShow) btnShow.addEventListener("click", showRoutes);
+    if (btnAlerts) btnAlerts.removeAttribute("disabled");
+  });
+
+  // --- Logout ---
+  function logout() {
+    localStorage.removeItem("clientLogged");
+    localStorage.removeItem("clientEmail");
+    window.location.href = "/mainPage";
+  }
+
+  // --- Service Worker ---
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+
+  // --- Mapa ---
+  const map = L.map("map").setView([-23.55, -46.63], 12);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+  }).addTo(map);
+
+  const truckIcon = L.icon({
+    iconUrl: "/icons/icon-192.png",
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+  });
 
   let routeLayer = null;
   let truckMarkers = {};
 
+  // --- Exibir rotas ---
   async function showRoutes() {
-    console.log("showRoutes() chamada");
-
     try {
-      const res = await fetch(API_BASE + '/api/routes/public', { credentials: 'include' });
+      const res = await fetch(API_BASE + "/api/routes/public", { credentials: "include" });
       if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
 
       const routes = await res.json();
@@ -117,111 +186,97 @@
         return;
       }
 
-      const list = document.getElementById('routeList');
+      const list = document.getElementById("routeList");
       if (!list) {
         console.error("Elemento #routeList não encontrado no DOM.");
         return;
       }
 
-      list.innerHTML = '';
+      list.innerHTML = "";
       routes.forEach(r => {
-        const item = document.createElement('button');
-        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+        const item = document.createElement("button");
+        item.className =
+                "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
         item.innerHTML = `
-        <span>${r.originName || 'Origem desconhecida'} → ${r.name || 'Destino desconhecido'}</span>
+        <span>${r.originName || "Origem desconhecida"} → ${r.name || "Destino desconhecido"}</span>
         <span class="badge bg-success">Ver</span>`;
-        item.addEventListener('click', () => drawRoute(r));
+        item.addEventListener("click", () => drawRoute(r));
         list.appendChild(item);
       });
 
-      const modalEl = document.getElementById('rotasModal');
+      const modalEl = document.getElementById("rotasModal");
       const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
       modal.show();
-
     } catch (e) {
       console.error("Erro ao carregar rotas:", e);
       alert("Erro ao carregar rotas.");
     }
   }
 
-  // --- animação suave dos caminhões em tempo real ---
-  if(logged){
-    async function updateTrucks(){
-      try{
-        const res=await fetch(API_BASE+'/api/trucks/public/live');
-        if(!res.ok) return;
-        const trucks=await res.json();
+  // --- Caminhões em tempo real (se logado) ---
+  if (logged) {
+    async function updateTrucks() {
+      try {
+        const res = await fetch(API_BASE + "/api/trucks/public/live");
+        if (!res.ok) return;
+        const trucks = await res.json();
 
-        trucks.forEach(t=>{
-          if(!t.lat||!t.lng) return;
-          const id=String(t.id);
-          const newPos=L.latLng(t.lat,t.lng);
+        trucks.forEach(t => {
+          if (!t.lat || !t.lng) return;
+          const id = String(t.id);
+          const newPos = L.latLng(t.lat, t.lng);
 
-          // se ainda não existe o marcador, adiciona com fade-in
-          if(!truckMarkers[id]){
-            const marker=L.marker(newPos,{icon:truckIcon,opacity:0}).addTo(map);
-            truckMarkers[id]=marker;
-            let op=0;
-            const fade=setInterval(()=>{
-              op+=0.1;
+          // novo marcador
+          if (!truckMarkers[id]) {
+            const marker = L.marker(newPos, { icon: truckIcon, opacity: 0 }).addTo(map);
+            truckMarkers[id] = marker;
+            let op = 0;
+            const fade = setInterval(() => {
+              op += 0.1;
               marker.setOpacity(op);
-              if(op>=1) clearInterval(fade);
-            },40);
+              if (op >= 1) clearInterval(fade);
+            }, 40);
           } else {
-            // animação suave entre posições
-            const marker=truckMarkers[id];
-            const start=marker.getLatLng();
-            const duration=1000; // 1s de transição
-            const startTime=performance.now();
+            // animação suave
+            const marker = truckMarkers[id];
+            const start = marker.getLatLng();
+            const duration = 1000;
+            const startTime = performance.now();
 
-            function animate(time){
-              const progress=Math.min((time-startTime)/duration,1);
-              const lat=start.lat+(newPos.lat-start.lat)*progress;
-              const lng=start.lng+(newPos.lng-start.lng)*progress;
-              marker.setLatLng([lat,lng]);
-              if(progress<1) requestAnimationFrame(animate);
+            function animate(time) {
+              const progress = Math.min((time - startTime) / duration, 1);
+              const lat = start.lat + (newPos.lat - start.lat) * progress;
+              const lng = start.lng + (newPos.lng - start.lng) * progress;
+              marker.setLatLng([lat, lng]);
+              if (progress < 1) requestAnimationFrame(animate);
             }
             requestAnimationFrame(animate);
           }
         });
-      }catch(e){console.error(e);}
+      } catch (e) {
+        console.error(e);
+      }
     }
-    setInterval(updateTrucks,3000);
+    setInterval(updateTrucks, 3000);
   }
 
-  window.addEventListener('DOMContentLoaded', () => {
-    const btnShow = document.getElementById('btnShowRoutes');
-    if (btnShow) {
-      btnShow.addEventListener('click', showRoutes);
-      console.log("Evento de clique adicionado ao botão 'Ver rotas disponíveis'");
-    }
-
-    const btnAlerts = document.getElementById('btnAlerts');
-    if (btnAlerts) {
-      btnAlerts.removeAttribute('disabled');
-    }
-  });
-
-
-  // --- Função para ativar notificações ---
+  // --- Notificações ---
   async function enableAlerts() {
-    console.log("🟢 enableAlerts() foi chamada");
-
-    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
       alert("Seu navegador não suporta notificações push.");
       return;
     }
 
     const perm = await Notification.requestPermission();
-    if (perm !== 'granted') {
+    if (perm !== "granted") {
       alert("Permissão de notificação negada.");
       return;
     }
 
     const reg = await navigator.serviceWorker.ready;
-    const vapidPublicKey = "BNpv_xHzO1ton3ihU5gYirNuEJRp8q-5y2KZVLER6Um0ciJiXAWNtvFnZP80cuCW6eUueDTYhUlCWRkZuYqtXAE";
+    const vapidPublicKey =
+            "BNpv_xHzO1ton3ihU5gYirNuEJRp8q-5y2KZVLER6Um0ciJiXAWNtvFnZP80cuCW6eUueDTYhUlCWRkZuYqtXAE";
 
-    // Converte a chave pública (base64 → Uint8Array)
     function urlBase64ToUint8Array(base64String) {
       const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
       const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -236,43 +291,34 @@
       applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
     });
 
-    console.log("Subscrição de Push criada:", sub);
-
-    await fetch(API_BASE + '/api/notifications/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    await fetch(API_BASE + "/api/notifications/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(sub),
-      credentials: 'include'
+      credentials: "include"
     });
 
     alert("Notificações ativadas com sucesso!");
-    const btn = document.getElementById('btnAlerts');
-    btn.textContent = 'Alertas ativados';
+    const btn = document.getElementById("btnAlerts");
+    btn.textContent = "Alertas ativados";
     btn.disabled = true;
   }
 
+  // --- Desenhar rota ---
   function drawRoute(route) {
-    console.log("Desenhando rota:", route.name || "sem nome");
-
-    // Remove rota anterior se existir
-    if (window.routeLayer) {
-      map.removeLayer(window.routeLayer);
-    }
-
+    if (window.routeLayer) map.removeLayer(window.routeLayer);
     if (!route.coordinates || route.coordinates.length === 0) {
       alert("Esta rota não possui coordenadas registradas.");
       return;
     }
 
-    window.routeLayer = L.polyline(route.coordinates, { color: 'green', weight: 5 }).addTo(map);
-
+    window.routeLayer = L.polyline(route.coordinates, { color: "green", weight: 5 }).addTo(map);
     map.fitBounds(window.routeLayer.getBounds(), { padding: [30, 30] });
 
     const start = route.coordinates[0];
     const end = route.coordinates[route.coordinates.length - 1];
-
-    const iconStart = L.divIcon({ className: 'custom-icon-start', html: '🟢', iconSize: [20, 20] });
-    const iconEnd = L.divIcon({ className: 'custom-icon-end', html: '🔵', iconSize: [20, 20] });
+    const iconStart = L.divIcon({ className: "custom-icon-start", html: "🟢", iconSize: [20, 20] });
+    const iconEnd = L.divIcon({ className: "custom-icon-end", html: "🔵", iconSize: [20, 20] });
 
     if (window.startMarker) map.removeLayer(window.startMarker);
     if (window.endMarker) map.removeLayer(window.endMarker);
@@ -280,14 +326,11 @@
     window.startMarker = L.marker(start, { icon: iconStart }).addTo(map).bindPopup("Origem");
     window.endMarker = L.marker(end, { icon: iconEnd }).addTo(map).bindPopup("Destino");
 
-    const modalEl = document.getElementById('rotasModal');
+    const modalEl = document.getElementById("rotasModal");
     const modal = bootstrap.Modal.getInstance(modalEl);
     if (modal) modal.hide();
-
-    console.log("Rota exibida no mapa com sucesso!");
   }
-
-
 </script>
+
 </body>
 </html>

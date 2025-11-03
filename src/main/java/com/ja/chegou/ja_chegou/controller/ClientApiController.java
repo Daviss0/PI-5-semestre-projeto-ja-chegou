@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +20,9 @@ public class ClientApiController {
 
     @Autowired
     private ClientService clientService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @PostMapping("/register")
     public ResponseEntity<?> register (@RequestBody @Valid Client client) {
@@ -36,18 +40,22 @@ public class ClientApiController {
         String password = loginData.get("password");
 
         Optional<Client> optClient = clientService.findByEmail(email);
-        if (optClient.isEmpty())
+        if (optClient.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("E-mail não encontrado.");
+        }
 
         Client client = optClient.get();
-        if (!client.getPassword().equals(password))
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Senha incorreta.");
 
-        client.setLastAcess(LocalDateTime.now());
-        clientService.update(client);
+        if (!passwordEncoder.matches(password, client.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Senha incorreta.");
+        }
+
+        clientService.updateLastAccess(client.getId());
+
 
         return ResponseEntity.ok("Login realizado com sucesso!");
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getClient(@PathVariable Long id) {

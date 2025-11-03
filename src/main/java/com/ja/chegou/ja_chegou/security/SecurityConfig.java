@@ -18,44 +18,26 @@ public class SecurityConfig {
     private final CustomUserDetailsService customUserDetailsService;
 
     @Autowired
-    CustomAuthenticationFailureHandler customAuthenticationFailureHandler;
+    private CustomAuthenticationFailureHandler customAuthenticationFailureHandler;
 
-    public SecurityConfig(CustomUserDetailsService userDetailsService,
+    public SecurityConfig(CustomUserDetailsService customUserDetailsService,
                           CustomAuthenticationFailureHandler customAuthenticationFailureHandler) {
-        this.customUserDetailsService = userDetailsService;
+        this.customUserDetailsService = customUserDetailsService;
         this.customAuthenticationFailureHandler = customAuthenticationFailureHandler;
     }
 
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain adminSecurity(HttpSecurity http) throws Exception {
         http
+                .securityMatcher("/admin/**", "/driver/**", "/user/**")
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
-                        // 🔓 Endpoints públicos da API (liberados para o app Expo)
-                        .requestMatchers("/api/collections/**").permitAll()
-                        .requestMatchers("/api/osrm/**").permitAll()
-                        .requestMatchers("/api/routes/public").permitAll()
-                        .requestMatchers("/api/trucks/public/**").permitAll()
-
-                        // 🔓 Recursos estáticos e páginas públicas
-                        .requestMatchers(
-                                "/", "/mainPage",
-                                "/manifest.webmanifest",
-                                "/sw.js",
-                                "/icons/**",
-                                "/css/**", "/js/**", "/images/**", "/webjars/**",
-                                "/login", "/cadastro"
-                        ).permitAll()
-
-                        // 🔐 Login administrativo e console
                         .requestMatchers("/admin/login_adm", "/admin/register", "/h2-console/**").permitAll()
-                        .requestMatchers("/admin/**", "/driver/**", "/user/**").hasRole("ADMIN")
-
-                        // 🚫 Tudo o resto precisa de login
-                        .anyRequest().authenticated()
+                        .anyRequest().hasRole("ADMIN")
                 )
-                // ⚙️ Configuração de login administrativo (mantida)
                 .formLogin(form -> form
                         .loginPage("/admin/login_adm")
                         .loginProcessingUrl("/admin/login")
@@ -63,15 +45,36 @@ public class SecurityConfig {
                         .failureHandler(customAuthenticationFailureHandler)
                         .permitAll()
                 )
-                .logout(logout -> logout.permitAll());
+                .logout(logout -> logout
+                        .logoutUrl("/admin/logout")
+                        .logoutSuccessUrl("/admin/login_adm?logout")
+                        .permitAll()
+                )
+                .userDetailsService(customUserDetailsService);
 
         return http.build();
     }
 
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    @Order(2)
+    public SecurityFilterChain publicSecurity(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/", "/mainPage", "/client/login", "/registerClient", "/register", "/profile",
+                                "/manifest.webmanifest", "/sw.js",
+                                "/icons/**", "/css/**", "/js/**", "/images/**", "/webjars/**",
+                                "/api/clients/**", "/api/collections/**", "/api/osrm/**", "/api/routes/public", "/api/trucks/public/**"
+                        ).permitAll()
+                        .anyRequest().permitAll()
+                )
+                .formLogin(form -> form.disable())
+                .logout(logout -> logout.disable());
+
+        return http.build();
     }
 
     @Bean

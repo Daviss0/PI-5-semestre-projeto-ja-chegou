@@ -27,6 +27,8 @@
             <button type="submit" class="btn btn-success px-4">Entrar</button>
             <a href="/register" class="btn btn-outline-secondary ms-2">Cadastrar-se</a>
         </div>
+
+        <div id="msg" class="mt-4 text-center"></div>
     </form>
 </div>
 
@@ -50,20 +52,32 @@
                     body: JSON.stringify(data)
                 });
 
+                if (!msgEl) return;
+
                 if (res.ok) {
-                    msgEl.innerHTML = `<div class="alert alert-success">Login realizado com sucesso!</div>`;
-                    setTimeout(() => window.location.href = '/mainPage', 1200);
+                    const result = await res.text();
+
+                    localStorage.setItem("clientLogged", "true");
+
+                    localStorage.setItem("clientEmail", data.email);
+
+                    msgEl.innerHTML = `
+        <div class="alert alert-success">
+            Login realizado com sucesso! Redirecionando...
+        </div>`;
+
+                    setTimeout(() => window.location.href = '/mainPage', 1500);
                 } else {
                     const err = await res.text();
                     msgEl.innerHTML = `<div class="alert alert-danger">${err}</div>`;
                 }
             } catch (err) {
-                msgEl.innerHTML = `<div class="alert alert-danger">Erro ao conectar ao servidor.</div>`;
+                if (msgEl)
+                    msgEl.innerHTML = `<div class="alert alert-danger">Erro ao conectar ao servidor.</div>`;
                 console.error(err);
             }
         });
     });
 </script>
-
 </body>
 </html>
