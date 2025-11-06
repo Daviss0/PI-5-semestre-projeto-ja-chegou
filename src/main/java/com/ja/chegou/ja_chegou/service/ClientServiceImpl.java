@@ -61,10 +61,10 @@ public class ClientServiceImpl implements ClientService {
     }
 
     @Override
-    public Optional<Client> findByEmail(String email) {
-        return clientRepository.findByEmail(email);
+    public Client findByEmail(String email) {
+        Optional<Client> opt = clientRepository.findByEmail(email);
+        return opt.orElse(null);
     }
-
     @Override
     public Client getByEmail(String email) {
         return clientRepository.findByEmail(email)
@@ -113,5 +113,9 @@ public class ClientServiceImpl implements ClientService {
         });
     }
 
+    @Override
+    public Client save(Client client) {
+        return clientRepository.save(client);
+    }
 
 }

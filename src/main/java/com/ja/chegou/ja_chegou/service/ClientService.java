@@ -13,11 +13,13 @@ public interface ClientService {
 
     void delete(Long id);
 
-    Optional<Client> findByEmail(String email);
+    Client findByEmail(String email);
 
     Client getByEmail(String email);
 
     Client update(Client client);
 
     void updateLastAccess(Long id);
+
+    Client save(Client client);
 }

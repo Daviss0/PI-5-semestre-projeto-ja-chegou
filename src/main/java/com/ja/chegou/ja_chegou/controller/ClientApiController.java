@@ -39,23 +39,20 @@ public class ClientApiController {
         String email = loginData.get("email");
         String password = loginData.get("password");
 
-        Optional<Client> optClient = clientService.findByEmail(email);
-        if (optClient.isEmpty()) {
+        Client client = clientService.findByEmail(email);
+
+        if (client == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("E-mail não encontrado.");
         }
 
-        Client client = optClient.get();
-
-        if (!passwordEncoder.matches(password, client.getPassword())) {
+        if (!passwordEncoder.matches(password, client.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Senha incorreta.");
         }
 
         clientService.updateLastAccess(client.getId());
 
-
         return ResponseEntity.ok("Login realizado com sucesso!");
     }
-
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getClient(@PathVariable Long id) {

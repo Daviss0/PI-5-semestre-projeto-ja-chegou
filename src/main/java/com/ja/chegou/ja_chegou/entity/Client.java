@@ -75,6 +75,9 @@ public class Client {
     @Column(length = 500)
     private String observations;
 
+    @Column(nullable = false)
+    private String passwordHash;
+
     //controle
     private LocalDateTime registerDate = LocalDateTime.now();
 
@@ -164,4 +167,8 @@ public class Client {
     public String getObservations() {return observations;}
 
     public void setObservations(String observations) {this.observations = observations;}
+
+    public String getPasswordHash() {return passwordHash;}
+
+    public void setPasswordHash(String passwordHash) {this.passwordHash = passwordHash;}
 }
