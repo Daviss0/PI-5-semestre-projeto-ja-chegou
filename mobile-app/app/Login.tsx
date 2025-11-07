@@ -1,4 +1,3 @@
-// mobile-app/app/Login.tsx
 import React, { useState } from "react";
 import {
     View,
@@ -12,6 +11,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
+import { API_BASE_URL } from "../config"; // 👈 novo import
 
 export default function Login() {
     const router = useRouter();
@@ -29,7 +29,7 @@ export default function Login() {
 
         try {
             setLoading(true);
-            const response = await fetch("http://192.168.1.107:8080/api/clients/login", {
+            const response = await fetch(`${API_BASE_URL}/clients/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, senha }),
@@ -37,7 +37,7 @@ export default function Login() {
 
             if (response.ok) {
                 const client = await response.json();
-                await login(client); // usa o contexto global
+                await login(client);
                 Alert.alert("Bem-vindo", `Olá, ${client.name}!`, [
                     { text: "OK", onPress: () => router.replace("/Profile") },
                 ]);
