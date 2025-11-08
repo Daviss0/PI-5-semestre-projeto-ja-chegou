@@ -7,12 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/clients")
@@ -25,11 +22,11 @@ public class ClientApiController {
     private PasswordEncoder passwordEncoder;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register (@RequestBody @Valid Client client) {
+    public ResponseEntity<?> register(@RequestBody @Valid Client client) {
         try {
-            return ResponseEntity.ok(clientService.register(client));
-        }
-        catch (RuntimeException e) {
+            Client saved = clientService.register(client);
+            return ResponseEntity.ok(saved);
+        } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -40,17 +37,17 @@ public class ClientApiController {
         String password = loginData.get("password");
 
         Client client = clientService.findByEmail(email);
-
         if (client == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("E-mail não encontrado.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("E-mail não encontrado.");
         }
 
-        if (!passwordEncoder.matches(password, client.getPasswordHash())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Senha incorreta.");
+        if (!passwordEncoder.matches(password, client.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Senha incorreta.");
         }
 
         clientService.updateLastAccess(client.getId());
-
         return ResponseEntity.ok("Login realizado com sucesso!");
     }
 
@@ -61,5 +58,13 @@ public class ClientApiController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/by-email")
+    public ResponseEntity<?> getByEmail(@RequestParam String email) {
+        Client client = clientService.findByEmail(email);
+        if (client == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(client);
+    }
 
 }

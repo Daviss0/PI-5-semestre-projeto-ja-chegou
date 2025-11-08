@@ -10,11 +10,13 @@ import java.time.LocalDateTime;
 
 @Entity
 public class Client {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    //dados pessoais
+    // ======== Dados pessoais ========
+
     @NotBlank(message = "O nome é obrigatório.")
     @Size(min = 3, max = 80, message = "O nome deve ter entre 3 e 80 caracteres.")
     private String name;
@@ -22,7 +24,6 @@ public class Client {
     @ValidCPF
     @Column(unique = true)
     private String cpf;
-
 
     @NotBlank(message = "O e-mail é obrigatório.")
     @Email(message = "Formato de e-mail inválido.")
@@ -33,38 +34,37 @@ public class Client {
     @Size(min = 6, message = "A senha deve ter pelo menos 6 caracteres.")
     private String password;
 
-    @Pattern(regexp = "\\d{10,11}", message = "O telefone deve conter 10 ou 11 dígitos (DDD + número).")
+    @Column(nullable = true)
     private String phone;
 
     @Past(message = "A data de nascimento deve estar no passado.")
-    @NotNull(message = "A data de nascimento é obrigatória.")
+    @Column(nullable = true)
     private LocalDate birthDate;
 
-    //endereço
-    @NotBlank(message = "O CEP é obrigatório.")
-    @Pattern(regexp = "\\d{8}", message = "O CEP deve conter 8 dígitos.")
+    // ======== Endereço ========
+
+    @Column(nullable = true)
     private String cep;
 
-    @NotBlank(message = "O logradouro é obrigatório.")
+    @Column(nullable = true)
     private String logradouro;
 
-    @NotBlank(message = "O número é obrigatório.")
+    @Column(nullable = true)
     private String number;
 
+    @Column(nullable = true)
     private String complement;
 
-    @NotBlank(message = "O bairro é obrigatório.")
+    @Column(nullable = true)
     private String hood;
 
-    @NotBlank(message = "A cidade é obrigatória.")
+    @Column(nullable = true)
     private String city;
 
-    @NotBlank(message = "O estado é obrigatório.")
-    @Size(min = 2, max = 2, message = "O estado deve conter a sigla (ex: SP, RJ).")
+    @Column(nullable = true)
     private String state;
 
     private Double latitude;
-
     private Double longitude;
 
     private Boolean active = true;
@@ -75,100 +75,178 @@ public class Client {
     @Column(length = 500)
     private String observations;
 
-    @Column(nullable = false)
-    private String passwordHash;
+    // ======== Controle ========
 
-    //controle
     private LocalDateTime registerDate = LocalDateTime.now();
-
     private LocalDateTime lastAcess;
 
-    //getters & setters
-    public void setId(Long id) {this.id = id;}
+    // ======== Getters e Setters ========
 
-    public Long getId() {return id;}
+    public Long getId() {
+        return id;
+    }
 
-    public String getName() {return name;}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public void setName(String name) {this.name = name;}
+    public String getName() {
+        return name;
+    }
 
-    public String getCpf() {return cpf;}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public void setCpf(String cpf) {this.cpf = cpf;}
+    public String getCpf() {
+        return cpf;
+    }
 
-    public String getEmail() {return email;}
+    public void setCpf(String cpf) {
+        this.cpf = cpf;
+    }
 
-    public void setEmail(String email) {this.email = email;}
+    public String getEmail() {
+        return email;
+    }
 
-    public String getPassword() {return password;}
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    public void setPassword(String password) {this.password = password;}
+    public String getPassword() {
+        return password;
+    }
 
-    public String getPhone() {return phone;}
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
-    public void setPhone(String phone) {this.phone = phone;}
+    public String getPhone() {
+        return phone;
+    }
 
-    public LocalDate getBirthDate() {return birthDate;}
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
 
-    public void setBirthDate(LocalDate birthDate) {this.birthDate = birthDate;}
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
 
-    public String getCep() {return cep;}
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
 
-    public void setCep(String cep) {this.cep = cep;}
+    public String getCep() {
+        return cep;
+    }
 
-    public String getLogradouro() {return logradouro;}
+    public void setCep(String cep) {
+        this.cep = cep;
+    }
 
-    public void setLogradouro(String logradouro) {this.logradouro = logradouro;}
+    public String getLogradouro() {
+        return logradouro;
+    }
 
-    public String getNumber() {return number;}
+    public void setLogradouro(String logradouro) {
+        this.logradouro = logradouro;
+    }
 
-    public void setNumber(String number) {this.number = number;}
+    public String getNumber() {
+        return number;
+    }
 
-    public String getComplement() {return complement;}
+    public void setNumber(String number) {
+        this.number = number;
+    }
 
-    public void setComplement(String complement) {this.complement = complement;}
+    public String getComplement() {
+        return complement;
+    }
 
-    public String getHood() {return hood;}
+    public void setComplement(String complement) {
+        this.complement = complement;
+    }
 
-    public void setHood(String hood) {this.hood = hood;}
+    public String getHood() {
+        return hood;
+    }
 
-    public String getCity() {return city;}
+    public void setHood(String hood) {
+        this.hood = hood;
+    }
 
-    public void setCity(String city) {this.city = city;}
+    public String getCity() {
+        return city;
+    }
 
-    public String getState() {return state;}
+    public void setCity(String city) {
+        this.city = city;
+    }
 
-    public void setState(String state) {this.state = state;}
+    public String getState() {
+        return state;
+    }
 
-    public Double getLatitude() {return latitude;}
+    public void setState(String state) {
+        this.state = state;
+    }
 
-    public void setLatitude(Double latitude) {this.latitude = latitude;}
+    public Double getLatitude() {
+        return latitude;
+    }
 
-    public Double getLongitude() {return longitude;}
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
 
-    public void setLongitude(Double longitude) {this.longitude = longitude;}
+    public Double getLongitude() {
+        return longitude;
+    }
 
-    public LocalDateTime getRegisterDate() {return registerDate;}
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
+    }
 
-    public void setRegisterDate(LocalDateTime registerDate) {this.registerDate= registerDate;}
+    public Boolean getActive() {
+        return active;
+    }
 
-    public LocalDateTime getLastAcess() {return lastAcess;}
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
 
-    public void setLastAcess(LocalDateTime lastAcess) {this.lastAcess = lastAcess;}
+    public Role getTypeUser() {
+        return typeUser;
+    }
 
-    public Boolean getActive() {return active;}
+    public void setTypeUser(Role typeUser) {
+        this.typeUser = typeUser;
+    }
 
-    public void setActive(Boolean active) {this.active = active;}
+    public String getObservations() {
+        return observations;
+    }
 
-    public Role getTypeUser() {return typeUser;}
+    public void setObservations(String observations) {
+        this.observations = observations;
+    }
 
-    public void setTypeUser(Role typeUser) {this.typeUser = typeUser;}
+    public LocalDateTime getRegisterDate() {
+        return registerDate;
+    }
 
-    public String getObservations() {return observations;}
+    public void setRegisterDate(LocalDateTime registerDate) {
+        this.registerDate = registerDate;
+    }
 
-    public void setObservations(String observations) {this.observations = observations;}
+    public LocalDateTime getLastAcess() {
+        return lastAcess;
+    }
 
-    public String getPasswordHash() {return passwordHash;}
-
-    public void setPasswordHash(String passwordHash) {this.passwordHash = passwordHash;}
+    public void setLastAcess(LocalDateTime lastAcess) {
+        this.lastAcess = lastAcess;
+    }
 }

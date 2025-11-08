@@ -13,6 +13,8 @@ public class AccountForm {
 
     private String phone;
 
+    private String email;
+
     private String cep;
     private String logradouro;
     private String hood;
@@ -21,8 +23,8 @@ public class AccountForm {
 
     private String currentPassword;
 
-    @Size(min = 6, message = "Senha deve ter no mínimo 6 caracteres")
     private String newPassword;
+
     private String confirmPassword;
 
     //getters & setters
@@ -70,6 +72,10 @@ public class AccountForm {
     public String getConfirmPassword() {return confirmPassword;}
 
     public void setConfirmPassword(String confirmPassword) {this.confirmPassword = confirmPassword;}
+
+    public String getEmail() {return email;}
+
+    public void setEmail(String email) {this.email = email;}
 
     public static AccountForm fromClient(Client c) {
         AccountForm f = new AccountForm();

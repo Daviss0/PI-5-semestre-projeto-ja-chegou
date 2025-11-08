@@ -6,80 +6,151 @@
   <title>Já Chegou</title>
 
   <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#00264d"/>
+  <meta name="theme-color" content="#0b0c10"/>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
   <style>
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;background:#f8fafc}
-    .topbar{position:sticky;top:0;background:#00264d;color:#fff;padding:12px 16px;z-index:10;font-weight:700}
-    .container{padding:16px;max-width:640px;margin:0 auto}
-    .card{background:#fff;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,.06);padding:16px;margin-bottom:12px}
-    .btn{appearance:none;border:0;background:#007f3d;color:#fff;padding:10px 14px;border-radius:12px;font-weight:600;cursor:pointer;transition:background .2s}
-    .btn:hover{background:#006b34}
-    .row{display:flex;gap:8px;flex-wrap:wrap}
-    .grow{flex:1}
-    #map{height:420px;width:100%;border-radius:12px}
-    .bottomnav{position:sticky;bottom:0;background:#fff;border-top:1px solid #e5e7eb;padding:8px;display:flex;gap:8px;justify-content:space-around}
-    .modal.fade .modal-dialog{transform:translateY(-30px);opacity:0;transition:all .35s ease-out}
-    .modal.show .modal-dialog{transform:translateY(0);opacity:1}
-    .legend{background:#fff;padding:8px;border-radius:10px;font-size:.9em;box-shadow:0 3px 6px rgba(0,0,0,.2);position:absolute;bottom:15px;left:15px;z-index:1000}
-    .legend div{margin:2px 0}
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu;
+      background-color: #0b0c10;
+      color: #f1f1f1;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      background-color: #1a1b1f;
+      color: #fff;
+      font-weight: 700;
+      text-align: center;
+      padding: 12px;
+      z-index: 10;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #2e2f33;
+    }
+
+    .bottomnav {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background-color: #1a1b1f;
+      border-top: 1px solid #2e2f33;
+      padding: 8px 0;
+      color: #aaa;
+      font-size: 0.9rem;
+    }
+
+    .bottomnav button {
+      background: none;
+      border: none;
+      color: #aaa;
+      text-align: center;
+      flex: 1;
+      padding: 6px 0;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .bottomnav button.active,
+    .bottomnav button:hover {
+      color: #fff;
+    }
+
+    .bottomnav .icon {
+      display: block;
+      font-size: 1.3rem;
+      margin-bottom: 3px;
+    }
+
+    .legend {
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 0.9em;
+      position: absolute;
+      bottom: 80px;
+      left: 15px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .legend div { margin: 4px 0; }
+
+    .modal-content {
+      background-color: #1f2024;
+      color: #fff;
+    }
   </style>
 </head>
 
 <body>
 <header class="topbar">Já Chegou</header>
 
-<main class="container">
-  <!-- Seção de título -->
-  <section class="card">
-    <h1 style="margin:0">Mapa do Já Chegou</h1>
-    <p style="margin-top:8px" id="statusText">
-      Veja as rotas disponíveis e acompanhe o serviço.
-    </p>
-  </section>
+<main style="position:relative;flex:1;">
+  <div id="map"></div>
 
-  <!-- Seção do mapa -->
-  <section class="card">
-    <div id="map"></div>
-    <div class="legend">
-      <div>🟢 Origem</div>
-      <div>🔵 Destino</div>
-      <div>🚛 Caminhão</div>
-    </div>
-  </section>
-
-  <!-- Seção de botões -->
-  <section class="card row text-center">
-    <h3 id="welcomeMsg" class="w-100"></h3>
-    <button class="btn grow" id="btnShowRoutes" onclick="showRoutes()">Ver rotas disponíveis</button>
-
-    <!-- Botões de visitante -->
-    <button id="btnLogin" class="btn grow" onclick="location.href='/client/login'">Entrar</button>
-    <button id="btnRegister" class="btn grow" onclick="location.href='/register'">Cadastrar</button>
-
-    <!-- Botões do cliente -->
-    <button id="btnAccount" class="btn grow" onclick="location.href='/profile'">Minha conta</button>
-    <button id="btnAlerts" class="btn grow" onclick="enableAlerts()" disabled>Ativar alertas</button>
-    <button id="btnLogout" class="btn grow btn-outline-danger" onclick="logout()">Sair</button>
-  </section>
+  <div class="legend">
+    <div>🟢 Origem</div>
+    <div>🔵 Destino</div>
+    <div>🚛 Caminhão</div>
+  </div>
 </main>
 
-<!-- Barra inferior -->
-<nav class="bottomnav">
-  <button class="btn grow" onclick="location.href='/'">Home</button>
-  <button id="navLogin" class="btn grow" onclick="location.href='/client/login'">Entrar</button>
-  <button id="navRegister" class="btn grow" onclick="location.href='/register'">Cadastrar</button>
-  <button id="navAccount" class="btn grow" onclick="location.href='/account'">Minha conta</button>
-  <button id="navLogout" class="btn grow btn-outline-danger" onclick="logout()">Sair</button>
+<<nav class="bottomnav" style="position: relative;">
+  <button id="btnShowRoutes">
+    <span class="icon">🚛</span>Rotas
+  </button>
+  <button id="navLogin" onclick="location.href='/client/login'">
+    <span class="icon">🔐</span>Entrar
+  </button>
+  <button id="navRegister" onclick="location.href='/register'">
+    <span class="icon">📝</span>Cadastrar
+  </button>
+
+  <!-- 🟡 Novo botão de notificações -->
+  <button id="btnNotificacoes" type="button">
+    <span class="icon">🔔</span>Notificações
+  </button>
+
+  <button id="navAccount" onclick="openAccount()">
+    <span class="icon">👤</span>Conta
+  </button>
+  <button id="navLogout" onclick="logout()">
+    <span class="icon">🚪</span>Sair
+  </button>
+
+  <!-- ⚙️ Painel de configuração (começa oculto) -->
+  <div id="configNotificacao"
+       style="display:none; position:absolute; right:10px; bottom:55px; background:#1f1f1f; border:1px solid #333; border-radius:10px; padding:10px 12px; color:#fff; font-size:0.9rem; z-index:2000; box-shadow:0 4px 8px rgba(0,0,0,0.3); width:170px;">
+    <strong>🔔 Notificações</strong><br>
+    <label>Distância (km):</label><br>
+    <input type="number" id="distanciaAlerta" min="0.1" max="10" step="0.1" value="1"
+           style="width:60px; background:#2b2b2b; color:#fff; border:1px solid #555; border-radius:5px; padding:2px 4px; margin-bottom:4px;">
+    <br>
+    <label>Intervalo (min):</label><br>
+    <input type="number" id="tempoRearme" min="1" max="60" step="1" value="1"
+           style="width:60px; background:#2b2b2b; color:#fff; border:1px solid #555; border-radius:5px; padding:2px 4px;">
+  </div>
 </nav>
 
-<!-- Modal de rotas -->
+
+
 <div class="modal fade" id="rotasModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
-      <div class="modal-header bg-success text-white">
+      <div class="modal-header bg-dark text-white">
         <h5 class="modal-title">Rotas disponíveis</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -95,59 +166,178 @@
 
 <script th:inline="javascript">
   const API_BASE = location.origin;
-  const loggedServer = /*[[${logged}]]*/ false; // vindo do Spring, ignorado se cliente estiver logado no front
-
-  console.log("Página carregada. Usuário logado (server):", loggedServer);
-
+  const loggedServer = /*[[${logged}]]*/ false;
   const loggedClient = localStorage.getItem("clientLogged") === "true";
   const clientEmail = localStorage.getItem("clientEmail") || null;
   const logged = loggedClient || loggedServer;
 
-  console.log("Status de login (localStorage):", loggedClient, "| Email:", clientEmail);
+  // 🔹 Variáveis globais do cliente
+  window.clientLat = null;
+  window.clientLng = null;
+  window.clientName = null;
+
+  // 🔧 Preferências de notificação (padrões)
+  let distanciaAlerta = 1.0; // km
+  let tempoRearme = 60000;   // 1 minuto em ms
 
   document.addEventListener("DOMContentLoaded", () => {
-    const welcomeMsg = document.getElementById("welcomeMsg");
-    const btnLogin = document.getElementById("btnLogin");
-    const btnRegister = document.getElementById("btnRegister");
-    const btnAccount = document.getElementById("btnAccount");
-    const btnAlerts = document.getElementById("btnAlerts");
-    const btnLogout = document.getElementById("btnLogout");
     const btnShow = document.getElementById("btnShowRoutes");
-
-    // Botões do rodapé
     const navLogin = document.getElementById("navLogin");
     const navRegister = document.getElementById("navRegister");
     const navAccount = document.getElementById("navAccount");
     const navLogout = document.getElementById("navLogout");
 
+    // Controle dos botões
     if (logged) {
-      if (welcomeMsg)
-        welcomeMsg.innerText = clientEmail
-                ? `Bem-vindo de volta, ${clientEmail}!`
-                : "Bem-vindo de volta!";
-
-      // Esconde botões de visitante
-      [btnLogin, btnRegister, navLogin, navRegister].forEach(b => b && (b.style.display = "none"));
-      // Mostra botões do cliente
-      [btnAccount, btnAlerts, btnLogout, navAccount, navLogout].forEach(b => b && (b.style.display = "inline-block"));
-
-      if (btnShow) btnShow.removeAttribute("disabled");
+      [navLogin, navRegister].forEach(b => b && (b.style.display = "none"));
+      [navAccount, navLogout].forEach(b => b && (b.style.display = "inline-block"));
     } else {
-      if (welcomeMsg)
-        welcomeMsg.innerText = "Bem-vindo! Faça login para visualizar rotas e alertas.";
-
-      // Mostra visitante
-      [btnLogin, btnRegister, navLogin, navRegister].forEach(b => b && (b.style.display = "inline-block"));
-      // Esconde cliente
-      [btnAccount, btnAlerts, btnLogout, navAccount, navLogout].forEach(b => b && (b.style.display = "none"));
-
-      if (btnShow) btnShow.setAttribute("disabled", "true");
+      [navLogin, navRegister].forEach(b => b && (b.style.display = "inline-block"));
+      [navAccount, navLogout].forEach(b => b && (b.style.display = "none"));
     }
 
-    // Evento principal
-    if (btnShow) btnShow.addEventListener("click", showRoutes);
-    if (btnAlerts) btnAlerts.removeAttribute("disabled");
+    // Botão de rotas
+    if (btnShow) {
+      btnShow.addEventListener("click", () => {
+        if (!logged) {
+          mostrarAvisoTopo("⚠️ Você precisa estar logado para ver as rotas.");
+        } else {
+          showRoutes();
+        }
+      });
+    }
+
+    // Solicita permissão de notificação
+    if ("Notification" in window) {
+      Notification.requestPermission().then(status => {
+        console.log("Permissão para notificações:", status);
+      });
+    }
+
+    // Painel de notificações
+    const painel = document.getElementById("configNotificacao");
+    const btnNotif = document.getElementById("btnNotificacoes");
+
+    if (btnNotif && painel) {
+      btnNotif.addEventListener("click", () => {
+        painel.style.display = painel.style.display === "none" ? "block" : "none";
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!painel.contains(e.target) && e.target !== btnNotif) {
+          painel.style.display = "none";
+        }
+      });
+    }
+
+    // Inputs de distância e tempo
+    const distanciaInput = document.getElementById("distanciaAlerta");
+    const tempoInput = document.getElementById("tempoRearme");
+
+    if (distanciaInput && tempoInput) {
+      distanciaInput.addEventListener("input", () => {
+        distanciaAlerta = parseFloat(distanciaInput.value);
+        console.log("🔧 Distância de alerta ajustada para:", distanciaAlerta, "km");
+      });
+
+      tempoInput.addEventListener("input", () => {
+        tempoRearme = parseInt(tempoInput.value) * 60000;
+        console.log("🔧 Intervalo de rearme ajustado para:", tempoInput.value, "min");
+      });
+    }
   });
+
+  // --- 🔊 Som de notificação ---
+  function tocarSomNotificacao() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.4);
+    } catch (e) {
+      console.warn("Falha ao reproduzir som:", e);
+    }
+  }
+
+  // --- 🔔 Aviso visual e sonoro ---
+  function mostrarAvisoTopo(mensagem) {
+    const existente = document.querySelector(".aviso-overlay");
+    if (existente) existente.remove();
+
+    // Toca som
+    tocarSomNotificacao();
+
+    // Fundo escurecido
+    const overlay = document.createElement("div");
+    overlay.className = "aviso-overlay";
+    Object.assign(overlay.style, {
+      position: "fixed",
+      top: 0, left: 0, width: "100%", height: "100%",
+      background: "rgba(0,0,0,0.6)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: "5000",
+      opacity: "0",
+      transition: "opacity 0.4s ease"
+    });
+    document.body.appendChild(overlay);
+
+    // Caixa central
+    const aviso = document.createElement("div");
+    aviso.innerHTML = `
+      <div style="font-size:2.5rem; animation: pulse 1s infinite alternate;">🚚</div>
+      <div style="margin-top:10px; font-size:1.5rem; font-weight:bold;">${mensagem}</div>
+    `;
+    Object.assign(aviso.style, {
+      background: "linear-gradient(145deg, #ffb300, #ff7300)",
+      color: "#fff",
+      padding: "30px 50px",
+      borderRadius: "15px",
+      boxShadow: "0 0 25px rgba(255,165,0,0.7)",
+      textAlign: "center",
+      opacity: "0",
+      transform: "scale(0.8)",
+      transition: "all 0.4s ease"
+    });
+    overlay.appendChild(aviso);
+
+    // Fade in
+    setTimeout(() => {
+      overlay.style.opacity = "1";
+      aviso.style.opacity = "1";
+      aviso.style.transform = "scale(1)";
+    }, 50);
+
+    // Fecha após 5s ou clique
+    setTimeout(() => fecharAviso(), 5000);
+    overlay.addEventListener("click", fecharAviso);
+
+    function fecharAviso() {
+      overlay.style.opacity = "0";
+      aviso.style.opacity = "0";
+      aviso.style.transform = "scale(0.9)";
+      setTimeout(() => overlay.remove(), 400);
+    }
+
+    // Animação CSS
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes pulse {
+        from { transform: scale(1); }
+        to { transform: scale(1.2); }
+      }`;
+    document.head.appendChild(style);
+  }
 
   // --- Logout ---
   function logout() {
@@ -159,10 +349,10 @@
   // --- Service Worker ---
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 
-  // --- Mapa ---
+  // --- Inicializa o mapa ---
   const map = L.map("map").setView([-23.55, -46.63], 12);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap"
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    attribution: "© OpenStreetMap, © CartoDB"
   }).addTo(map);
 
   const truckIcon = L.icon({
@@ -174,46 +364,104 @@
   let routeLayer = null;
   let truckMarkers = {};
 
+  // --- Buscar coordenadas do cliente ---
+  if (loggedClient && clientEmail) {
+    fetch(`/api/clients/by-email?email=${encodeURIComponent(clientEmail)}`)
+            .then(r => {
+              if (!r.ok) throw new Error("Erro HTTP " + r.status);
+              return r.json();
+            })
+            .then(client => {
+              if (client.latitude && client.longitude) {
+                window.clientLat = client.latitude;
+                window.clientLng = client.longitude;
+                window.clientName = client.name;
+
+                const clientIcon = L.icon({
+                  iconUrl: "https://cdn-icons-png.flaticon.com/512/2776/2776067.png",
+                  iconSize: [38, 38],
+                  iconAnchor: [19, 38],
+                  popupAnchor: [0, -35]
+                });
+
+                const marker = L.marker([clientLat, clientLng], { icon: clientIcon }).addTo(map);
+                marker.bindPopup(`<b>${clientName || "Seu endereço"}</b>`).openPopup();
+                map.setView([clientLat, clientLng], 15);
+              }
+            })
+            .catch(err => console.error("Erro ao buscar cliente:", err));
+  }
+
   // --- Exibir rotas ---
   async function showRoutes() {
     try {
       const res = await fetch(API_BASE + "/api/routes/public", { credentials: "include" });
       if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
-
       const routes = await res.json();
-      if (!routes.length) {
-        alert("Nenhuma rota cadastrada.");
-        return;
-      }
-
       const list = document.getElementById("routeList");
-      if (!list) {
-        console.error("Elemento #routeList não encontrado no DOM.");
-        return;
+      list.innerHTML = "";
+
+      if (!routes.length) {
+        list.innerHTML = `<div class="text-center py-3">Nenhuma rota cadastrada.</div>`;
       }
 
-      list.innerHTML = "";
       routes.forEach(r => {
         const item = document.createElement("button");
-        item.className =
-                "list-group-item list-group-item-action d-flex justify-content-between align-items-center";
-        item.innerHTML = `
-        <span>${r.originName || "Origem desconhecida"} → ${r.name || "Destino desconhecido"}</span>
-        <span class="badge bg-success">Ver</span>`;
+        item.className = "list-group-item list-group-item-action bg-dark text-white";
+        item.innerHTML = `<span>${r.originName || "Origem"} → ${r.name || "Destino"}</span>`;
         item.addEventListener("click", () => drawRoute(r));
         list.appendChild(item);
       });
 
-      const modalEl = document.getElementById("rotasModal");
-      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-      modal.show();
+      bootstrap.Modal.getOrCreateInstance(document.getElementById("rotasModal")).show();
     } catch (e) {
       console.error("Erro ao carregar rotas:", e);
       alert("Erro ao carregar rotas.");
     }
   }
 
-  // --- Caminhões em tempo real (se logado) ---
+  // --- Calcular distância ---
+  function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // --- Verificar proximidade ---
+  let avisoMostrado = false;
+
+  function verificarProximidade(trucks) {
+    if (!clientLat || !clientLng) return;
+    trucks.forEach(t => {
+      if (t.lat && t.lng) {
+        const dist = calcularDistanciaKm(clientLat, clientLng, t.lat, t.lng);
+        console.log(`Distância do caminhão ${t.id}:`, dist.toFixed(2), "km");
+        if (dist <= distanciaAlerta && !avisoMostrado) {
+          avisoMostrado = true;
+
+          // Notificação do navegador
+          if ("Notification" in window) {
+            if (Notification.permission === "granted") {
+              new Notification("🚚 O caminhão está chegando ao seu endereço!");
+            }
+          }
+
+          // Aviso visual + som
+          mostrarAvisoTopo("🚚 O caminhão está chegando ao seu endereço!");
+
+          // Rearmar depois do tempo configurado
+          setTimeout(() => avisoMostrado = false, tempoRearme);
+        }
+      }
+    });
+  }
+
+  // --- Atualizar caminhões em tempo real ---
   if (logged) {
     async function updateTrucks() {
       try {
@@ -226,7 +474,6 @@
           const id = String(t.id);
           const newPos = L.latLng(t.lat, t.lng);
 
-          // novo marcador
           if (!truckMarkers[id]) {
             const marker = L.marker(newPos, { icon: truckIcon, opacity: 0 }).addTo(map);
             truckMarkers[id] = marker;
@@ -237,12 +484,10 @@
               if (op >= 1) clearInterval(fade);
             }, 40);
           } else {
-            // animação suave
             const marker = truckMarkers[id];
             const start = marker.getLatLng();
             const duration = 1000;
             const startTime = performance.now();
-
             function animate(time) {
               const progress = Math.min((time - startTime) / duration, 1);
               const lat = start.lat + (newPos.lat - start.lat) * progress;
@@ -253,84 +498,46 @@
             requestAnimationFrame(animate);
           }
         });
+
+        verificarProximidade(trucks);
+
       } catch (e) {
         console.error(e);
       }
     }
+
     setInterval(updateTrucks, 3000);
   }
 
-  // --- Notificações ---
-  async function enableAlerts() {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-      alert("Seu navegador não suporta notificações push.");
-      return;
+  // --- Funções auxiliares ---
+  function openAccount() {
+    const email = localStorage.getItem("clientEmail");
+    if (email) {
+      location.href = `/profile?email=${encodeURIComponent(email)}`;
+    } else {
+      mostrarAvisoTopo("⚠️ Você precisa estar logado para acessar sua conta.");
     }
-
-    const perm = await Notification.requestPermission();
-    if (perm !== "granted") {
-      alert("Permissão de notificação negada.");
-      return;
-    }
-
-    const reg = await navigator.serviceWorker.ready;
-    const vapidPublicKey =
-            "BNpv_xHzO1ton3ihU5gYirNuEJRp8q-5y2KZVLER6Um0ciJiXAWNtvFnZP80cuCW6eUueDTYhUlCWRkZuYqtXAE";
-
-    function urlBase64ToUint8Array(base64String) {
-      const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-      const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-      const rawData = atob(base64);
-      const outputArray = new Uint8Array(rawData.length);
-      for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-      return outputArray;
-    }
-
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-    });
-
-    await fetch(API_BASE + "/api/notifications/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sub),
-      credentials: "include"
-    });
-
-    alert("Notificações ativadas com sucesso!");
-    const btn = document.getElementById("btnAlerts");
-    btn.textContent = "Alertas ativados";
-    btn.disabled = true;
   }
 
-  // --- Desenhar rota ---
   function drawRoute(route) {
-    if (window.routeLayer) map.removeLayer(window.routeLayer);
-    if (!route.coordinates || route.coordinates.length === 0) {
+    if (routeLayer) map.removeLayer(routeLayer);
+    if (!route.coordinates || !route.coordinates.length) {
       alert("Esta rota não possui coordenadas registradas.");
       return;
     }
 
-    window.routeLayer = L.polyline(route.coordinates, { color: "green", weight: 5 }).addTo(map);
-    map.fitBounds(window.routeLayer.getBounds(), { padding: [30, 30] });
+    routeLayer = L.polyline(route.coordinates, { color: "#00ff9d", weight: 5 }).addTo(map);
+    map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
 
     const start = route.coordinates[0];
     const end = route.coordinates[route.coordinates.length - 1];
-    const iconStart = L.divIcon({ className: "custom-icon-start", html: "🟢", iconSize: [20, 20] });
-    const iconEnd = L.divIcon({ className: "custom-icon-end", html: "🔵", iconSize: [20, 20] });
+    const iconStart = L.divIcon({ html: "🟢", className: "", iconSize: [20, 20] });
+    const iconEnd = L.divIcon({ html: "🔵", className: "", iconSize: [20, 20] });
+    L.marker(start, { icon: iconStart }).addTo(map).bindPopup("Origem");
+    L.marker(end, { icon: iconEnd }).addTo(map).bindPopup("Destino");
 
-    if (window.startMarker) map.removeLayer(window.startMarker);
-    if (window.endMarker) map.removeLayer(window.endMarker);
-
-    window.startMarker = L.marker(start, { icon: iconStart }).addTo(map).bindPopup("Origem");
-    window.endMarker = L.marker(end, { icon: iconEnd }).addTo(map).bindPopup("Destino");
-
-    const modalEl = document.getElementById("rotasModal");
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    if (modal) modal.hide();
+    bootstrap.Modal.getInstance(document.getElementById("rotasModal")).hide();
   }
 </script>
-
 </body>
 </html>

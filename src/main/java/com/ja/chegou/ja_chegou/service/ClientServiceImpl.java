@@ -6,6 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -20,14 +24,16 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public Client register(Client client) {
+        System.out.println("Chamando atualizarCoordenadas() no registro/atualização...");
         if (clientRepository.findByEmail(client.getEmail()).isPresent()) {
             throw new RuntimeException("E-mail já cadastrado!");
         }
 
         client.setPassword(passwordEncoder.encode(client.getPassword()));
-
         client.setActive(true);
         client.setRegisterDate(LocalDateTime.now());
+
+        atualizarCoordenadas(client);
 
         return clientRepository.save(client);
     }
@@ -73,6 +79,8 @@ public class ClientServiceImpl implements ClientService {
 
     @Override
     public Client update(Client client) {
+        System.out.println("Chamando atualizarCoordenadas() no registro/atualização...");
+
         if (client.getId() == null) {
             throw new RuntimeException("ID do cliente não pode ser nulo para atualização.");
         }
@@ -95,12 +103,14 @@ public class ClientServiceImpl implements ClientService {
         existing.setActive(client.getActive());
 
         if (client.getPassword() != null && !client.getPassword().isBlank()) {
-            if (!client.getPassword().startsWith("$2a$")) { // já está criptografada?
+            if (!client.getPassword().startsWith("$2a$")) {
                 existing.setPassword(passwordEncoder.encode(client.getPassword()));
             } else {
                 existing.setPassword(client.getPassword());
             }
         }
+
+        atualizarCoordenadas(existing);
 
         return clientRepository.save(existing);
     }
@@ -116,6 +126,34 @@ public class ClientServiceImpl implements ClientService {
     @Override
     public Client save(Client client) {
         return clientRepository.save(client);
+    }
+
+    @Override
+    public void atualizarCoordenadas(Client client) {
+        System.out.println("Atualizando coordenadas para: " + client.getCep());
+
+        try {
+            String endereco = String.format("%s, %s, %s, %s, %s",
+                    client.getLogradouro(), client.getNumber(), client.getCity(), client.getState(), client.getCep());
+
+            String url = UriComponentsBuilder
+                    .fromUriString("https://nominatim.openstreetmap.org/search")
+                    .queryParam("q", endereco)
+                    .queryParam("format", "json")
+                    .build().toUriString();
+
+            RestTemplate rest = new RestTemplate();
+            String resposta = rest.getForObject(url, String.class);
+
+            JSONArray arr = new JSONArray(resposta);
+            if (arr.length() > 0) {
+                JSONObject obj = arr.getJSONObject(0);
+                client.setLatitude(obj.getDouble("lat"));
+                client.setLongitude(obj.getDouble("lon"));
+            }
+        } catch (Exception e) {
+            System.out.println("Não foi possível obter coordenadas: " + e.getMessage());
+        }
     }
 
 }

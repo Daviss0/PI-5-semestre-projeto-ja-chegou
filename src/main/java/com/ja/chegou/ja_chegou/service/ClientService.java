@@ -22,4 +22,6 @@ public interface ClientService {
     void updateLastAccess(Long id);
 
     Client save(Client client);
+
+    void atualizarCoordenadas(Client client);
 }

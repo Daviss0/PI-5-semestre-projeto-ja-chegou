@@ -1,6 +1,7 @@
 package com.ja.chegou.ja_chegou.controller;
 
 import com.ja.chegou.ja_chegou.entity.AccountForm;
+import com.ja.chegou.ja_chegou.entity.AccountUpdateForm;
 import com.ja.chegou.ja_chegou.entity.Client;
 import com.ja.chegou.ja_chegou.service.ClientService;
 import jakarta.validation.Valid;
@@ -45,36 +46,63 @@ public class AccountController {
     }
 
     @PostMapping("/account")
-    public String updateAccount(@Valid @ModelAttribute("userForm") AccountForm form,
+    public String updateAccount(@ModelAttribute("userForm") AccountUpdateForm form,
                                 BindingResult binding,
                                 Model model,
                                 Principal principal,
                                 RedirectAttributes redirectAttrs) {
 
-        if (principal == null) {
+        String email = (principal != null) ? principal.getName() : form.getEmail();
+
+        if (email == null || email.isBlank()) {
             model.addAttribute("err", "Sessão expirada. Faça login novamente.");
-            return "redirect:/login";
+            return "redirect:/client/login";
         }
 
         if (binding.hasErrors()) {
+            System.out.println("Erros de binding detectados no formulário de conta:");
+            binding.getAllErrors().forEach(error -> {
+                System.out.println(" - " + error);
+            });
             model.addAttribute("err", "Existem erros no formulário.");
             return "account";
         }
 
-        Client client = clientService.findByEmail(principal.getName());
+        Client client = clientService.findByEmail(email);
         if (client == null) {
             model.addAttribute("err", "Cliente não encontrado.");
             return "account";
         }
 
-        client.setName(form.getName());
-        client.setBirthDate(form.getBirthDate());
-        client.setPhone(form.getPhone());
-        client.setCep(form.getCep());
-        client.setLogradouro(form.getLogradouro());
-        client.setHood(form.getHood());
-        client.setCity(form.getCity());
-        client.setState(form.getState());
+        if (form.getName() != null && !form.getName().isBlank())
+            client.setName(form.getName());
+
+        if (form.getBirthDate() != null)
+            client.setBirthDate(form.getBirthDate());
+
+        if (form.getPhone() != null && !form.getPhone().isBlank())
+            client.setPhone(form.getPhone());
+
+        if (form.getCep() != null && !form.getCep().isBlank())
+            client.setCep(form.getCep());
+
+        if (form.getLogradouro() != null && !form.getLogradouro().isBlank())
+            client.setLogradouro(form.getLogradouro());
+
+        if (form.getHood() != null && !form.getHood().isBlank())
+            client.setHood(form.getHood());
+
+        if (form.getCity() != null && !form.getCity().isBlank())
+            client.setCity(form.getCity());
+
+        if (form.getState() != null && !form.getState().isBlank())
+            client.setState(form.getState());
+
+        if (form.getNumber() != null && !form.getNumber().isBlank())
+            client.setNumber(form.getNumber());
+
+        if (form.getComplement() != null && !form.getComplement().isBlank())
+            client.setComplement(form.getComplement());
 
         if (form.getNewPassword() != null && !form.getNewPassword().isBlank()) {
 
@@ -84,17 +112,24 @@ public class AccountController {
             }
 
             if (form.getCurrentPassword() == null ||
-                    !passwordEncoder.matches(form.getCurrentPassword(), client.getPasswordHash())) {
+                    !passwordEncoder.matches(form.getCurrentPassword(), client.getPassword())) {
                 model.addAttribute("err", "Senha atual incorreta.");
                 return "account";
             }
 
-            client.setPasswordHash(passwordEncoder.encode(form.getNewPassword()));
+            client.setPassword(passwordEncoder.encode(form.getNewPassword()));
         }
 
-        clientService.save(client);
+        try {
+            clientService.save(client);
+            redirectAttrs.addFlashAttribute("msg", "Dados atualizados com sucesso!");
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("err", "Erro ao salvar os dados. Verifique os campos e tente novamente.");
+            return "account";
+        }
 
-        redirectAttrs.addFlashAttribute("msg", "Dados atualizados com sucesso!");
-        return "redirect:/account";
+        return "redirect:/profile?email=" + email;
     }
+
 }
