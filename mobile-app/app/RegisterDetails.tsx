@@ -13,6 +13,7 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { API_BASE_URL } from "../config"; // 👈 referência centralizada ao backend
 
 export default function RegisterDetails() {
     const router = useRouter();
@@ -21,7 +22,7 @@ export default function RegisterDetails() {
     const [senha, setSenha] = useState("");
 
     const [nome, setNome] = useState("");
-    const [cpf, setCpf] = useState(""); // 🔹 Novo campo CPF
+    const [cpf, setCpf] = useState("");
     const [celular, setCelular] = useState("");
     const [dataNascimento, setDataNascimento] = useState<Date | null>(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -34,23 +35,18 @@ export default function RegisterDetails() {
     const [numero, setNumero] = useState("");
     const [complemento, setComplemento] = useState("");
 
-    // 🔹 Recupera email e senha salvos da tela anterior
+    // Recupera email e senha armazenados na primeira etapa do registro
     useEffect(() => {
         (async () => {
-            try {
-                const stored = await AsyncStorage.getItem("registerData");
-                if (stored) {
-                    const data = JSON.parse(stored);
-                    setEmail(data.email);
-                    setSenha(data.senha);
-                }
-            } catch (err) {
-                console.error("Erro ao recuperar dados:", err);
+            const stored = await AsyncStorage.getItem("registerData");
+            if (stored) {
+                const data = JSON.parse(stored);
+                setEmail(data.email);
+                setSenha(data.senha);
             }
         })();
     }, []);
 
-    // 🔍 Buscar CEP via ViaCEP
     const buscarCep = async () => {
         if (cep.length !== 8) {
             Alert.alert("CEP inválido", "Digite um CEP válido com 8 dígitos.");
@@ -75,7 +71,6 @@ export default function RegisterDetails() {
         }
     };
 
-    // 🧾 Finalizar cadastro
     const handleRegister = async () => {
         if (!nome || !cpf || !celular || !dataNascimento || !cep || !numero) {
             Alert.alert("Atenção", "Preencha todos os campos obrigatórios.");
@@ -91,7 +86,7 @@ export default function RegisterDetails() {
             birthDate: dataNascimento.toISOString().split("T")[0],
             cep,
             logradouro,
-            hood: bairro, // 👈 o backend espera 'hood' e não 'bairro'
+            hood: bairro,
             city: cidade,
             state: uf,
             number: numero,
@@ -101,7 +96,7 @@ export default function RegisterDetails() {
         };
 
         try {
-            const response = await fetch("http://192.168.1.107:8080/api/clients/register", {
+            const response = await fetch(`${API_BASE_URL}/clients/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(usuario),
@@ -142,7 +137,6 @@ export default function RegisterDetails() {
                     onChangeText={setNome}
                 />
 
-                {/* 🔹 Novo campo de CPF */}
                 <TextInput
                     style={styles.input}
                     placeholder="CPF (somente números)"
@@ -185,7 +179,7 @@ export default function RegisterDetails() {
                     />
                 )}
 
-                {/* 🔹 CEP e botão de busca */}
+                {/* CEP e botão de busca */}
                 <View style={styles.cepRow}>
                     <TextInput
                         style={[styles.input, { flex: 1 }]}
@@ -255,7 +249,7 @@ export default function RegisterDetails() {
 const styles = StyleSheet.create({
     wrapper: {
         flex: 1,
-        backgroundColor: "#0E0E10",
+        backgroundColor: "#0E0E10", // evita fundo branco ao puxar
     },
     container: {
         backgroundColor: "#0E0E10",
@@ -290,14 +284,12 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     buscarButton: {
-        backgroundColor: "#1A1A1D",
+        backgroundColor: "#000",
         paddingVertical: 12,
-        paddingHorizontal: 18,
+        paddingHorizontal: 20,
         borderRadius: 10,
         alignItems: "center",
         justifyContent: "center",
-        borderWidth: 1,
-        borderColor: "#333",
     },
     buscarText: {
         color: "#FFF",
