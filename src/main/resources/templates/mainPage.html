@@ -165,6 +165,19 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script th:inline="javascript">
+
+  // 🔄 Recarrega dados atualizados caso venha de redirect ou cache
+  if (window.performance && window.performance.navigation.type === 2) {
+    console.log("Recarregando dados atualizados...");
+    window.location.reload(true);
+  }
+
+  // 🔄 Remove cache se veio de ?updated=true
+  if (window.location.search.includes("updated=true")) {
+    sessionStorage.removeItem("clientCache");
+    mostrarAvisoTopo("✅ Endereço atualizado com sucesso!");
+  }
+
   const API_BASE = location.origin;
   const loggedServer = /*[[${logged}]]*/ false;
   const loggedClient = localStorage.getItem("clientLogged") === "true";
@@ -214,17 +227,26 @@
       });
     }
 
-    // Painel de notificações
+    // 🟡 Painel de notificações (restrito a usuários logados)
     const painel = document.getElementById("configNotificacao");
     const btnNotif = document.getElementById("btnNotificacoes");
 
     if (btnNotif && painel) {
-      btnNotif.addEventListener("click", () => {
+      btnNotif.addEventListener("click", (e) => {
+        e.stopPropagation(); // evita conflito com o evento global de clique
+
+        if (!logged) {
+          mostrarAvisoTopo("⚠️ Você precisa estar logado para configurar as notificações.");
+          return;
+        }
+
+        // Alterna visibilidade do painel apenas se logado
         painel.style.display = painel.style.display === "none" ? "block" : "none";
       });
 
+      // Fecha o painel se clicar fora dele
       document.addEventListener("click", (e) => {
-        if (!painel.contains(e.target) && e.target !== btnNotif) {
+        if (painel.style.display === "block" && !painel.contains(e.target) && e.target !== btnNotif) {
           painel.style.display = "none";
         }
       });
@@ -366,7 +388,7 @@
 
   // --- Buscar coordenadas do cliente ---
   if (loggedClient && clientEmail) {
-    fetch(`/api/clients/by-email?email=${encodeURIComponent(clientEmail)}`)
+    fetch(`/api/clients/by-email?email=${encodeURIComponent(clientEmail)}&t=${Date.now()}`)
             .then(r => {
               if (!r.ok) throw new Error("Erro HTTP " + r.status);
               return r.json();
@@ -444,17 +466,11 @@
         if (dist <= distanciaAlerta && !avisoMostrado) {
           avisoMostrado = true;
 
-          // Notificação do navegador
-          if ("Notification" in window) {
-            if (Notification.permission === "granted") {
-              new Notification("🚚 O caminhão está chegando ao seu endereço!");
-            }
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("🚚 O caminhão está chegando ao seu endereço!");
           }
 
-          // Aviso visual + som
           mostrarAvisoTopo("🚚 O caminhão está chegando ao seu endereço!");
-
-          // Rearmar depois do tempo configurado
           setTimeout(() => avisoMostrado = false, tempoRearme);
         }
       }
@@ -500,7 +516,6 @@
         });
 
         verificarProximidade(trucks);
-
       } catch (e) {
         console.error(e);
       }
@@ -539,5 +554,6 @@
     bootstrap.Modal.getInstance(document.getElementById("rotasModal")).hide();
   }
 </script>
+
 </body>
 </html>

@@ -1,5 +1,5 @@
 // Altere apenas esse IP quando mudar de rede ou computador
-export const SERVER_IP = " 172.30.187.230"; // <- seu IP local atual
+export const SERVER_IP = " 192.168.15.6"; // <- seu IP local atual
 export const SERVER_PORT = 8080;
 
 // Caminho base para todas as chamadas da API

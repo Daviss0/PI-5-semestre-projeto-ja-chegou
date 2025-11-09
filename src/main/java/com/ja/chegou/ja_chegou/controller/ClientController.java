@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
@@ -65,5 +67,15 @@ public class ClientController {
         return "account";
     }
 
+    @PostMapping("/profile")
+    public String updateProfile(@ModelAttribute("userForm") Client client) {
+        try {
+            clientService.update(client);
+            return "redirect:/mainPage?updated=true";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "redirect:/profile?error=true";
+        }
+    }
 
 }

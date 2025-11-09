@@ -112,7 +112,9 @@ public class ClientServiceImpl implements ClientService {
 
         atualizarCoordenadas(existing);
 
-        return clientRepository.save(existing);
+        Client saved = clientRepository.saveAndFlush(existing);
+        clientRepository.refresh(saved);
+        return saved;
     }
 
     @Override

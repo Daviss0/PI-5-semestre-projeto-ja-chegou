@@ -60,11 +60,16 @@ public class ClientApiController {
 
     @GetMapping("/by-email")
     public ResponseEntity<?> getByEmail(@RequestParam String email) {
-        Client client = clientService.findByEmail(email);
-        if (client == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(client);
+        Client client = clientService.getByEmail(email); // garante Exception se não encontrar
+
+        clientService.atualizarCoordenadas(client);
+        clientService.save(client);
+
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+                .header("Pragma", "no-cache")
+                .body(client);
     }
+
 
 }
