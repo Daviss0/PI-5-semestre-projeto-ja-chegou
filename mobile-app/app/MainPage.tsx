@@ -1,17 +1,17 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
     View,
     Text,
     StyleSheet,
     TextInput,
     TouchableOpacity,
-    FlatList,
-    Keyboard,
     Animated,
-    Easing,
+    Keyboard,
 } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
+import MapView, { Polyline, Region } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 type RouteData = {
     id: number;
@@ -23,10 +23,9 @@ type RouteData = {
 };
 
 export default function MainPage() {
+    const router = useRouter();
     const mapRef = useRef<MapView>(null);
-    const inputRef = useRef<TextInput>(null);
-
-    const [region, setRegion] = useState({
+    const [region, setRegion] = useState<Region>({
         latitude: -23.55052,
         longitude: -46.633308,
         latitudeDelta: 0.05,
@@ -34,103 +33,66 @@ export default function MainPage() {
     });
 
     const [query, setQuery] = useState("");
-    const [address, setAddress] = useState<string | null>(null);
-    const [searched, setSearched] = useState(false);
     const [routes, setRoutes] = useState<RouteData[]>([]);
-    const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [searched, setSearched] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [mapLocked, setMapLocked] = useState(false);
+    const translateAnim = useRef(new Animated.Value(0)).current;
 
-    // animações do painel de rotas
-    const fadeAnim = useRef(new Animated.Value(1)).current;
-    const slideAnim = useRef(new Animated.Value(0)).current;
-    const [isVisible, setIsVisible] = useState(true);
-
-    const toggleRoutes = () => {
-        Keyboard.dismiss();
-        inputRef.current?.blur();
-
-        const newVisible = !isVisible;
-        setIsVisible(newVisible);
-
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: newVisible ? 1 : 0,
-                duration: 400,
-                easing: Easing.out(Easing.ease),
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-                toValue: newVisible ? 0 : 200,
-                duration: 450,
-                easing: Easing.inOut(Easing.cubic),
-                useNativeDriver: true,
-            }),
-        ]).start();
-    };
-
-    // animação suave de fechamento do teclado
-    const smoothKeyboardClose = () => {
-        Animated.timing(slideAnim, {
-            toValue: 0,
-            duration: 220,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-        }).start();
-        setTimeout(() => {
-            Keyboard.dismiss();
-        }, 150); // pequeno delay que cria a sensação de fade
-    };
-
-    // garante transição leve entre abrir/fechar teclado
-    useEffect(() => {
-        const hideSub = Keyboard.addListener("keyboardWillHide", smoothKeyboardClose);
-        return () => hideSub.remove();
-    }, []);
-
-    // busca por endereço
     const handleSearch = async () => {
         if (!query) return;
-        smoothKeyboardClose();
+        Keyboard.dismiss();
         try {
             const res = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}`
+                `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(
+                    query
+                )}`
             );
             const data = await res.json();
-            if (data.length === 0) {
-                setAddress("Endereço não encontrado");
-                setSearched(false);
-                return;
-            }
+            if (data.length === 0) return;
 
             const loc = data[0];
-            const addr = loc.address;
-            const street = addr.road || addr.pedestrian || addr.suburb || "Endereço";
-            const bairro = addr.suburb || addr.neighbourhood || "";
-            const cep = addr.postcode ? ` - ${addr.postcode}` : "";
-
             const latitude = parseFloat(loc.lat);
             const longitude = parseFloat(loc.lon);
 
-            setAddress(`${street}, ${bairro}${cep}`);
-            setUserLocation({ latitude, longitude });
-
-            mapRef.current?.animateToRegion(
-                {
-                    latitude: latitude - 0.002,
-                    longitude,
-                    latitudeDelta: 0.008,
-                    longitudeDelta: 0.008,
-                },
-                1000
-            );
-
-            setRegion({
-                latitude: latitude - 0.002,
+            const newRegion = {
+                latitude,
                 longitude,
-                latitudeDelta: 0.008,
-                longitudeDelta: 0.008,
-            });
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+            };
 
-            // cria rotas simuladas
+            setRegion(newRegion);
+            mapRef.current?.animateToRegion(newRegion, 1000);
+
+            setShowConfirm(true);
+        } catch (err) {
+            console.error("Erro ao buscar local:", err);
+        }
+    };
+
+    const handleMapDrag = () => {
+        if (!mapLocked) setShowConfirm(true);
+    };
+
+    const handleViewRoutes = () => {
+        setShowConfirm(false);
+        setMapLocked(true);
+
+        // 🎯 Define a nova região (zoom mais fechado)
+        const zoomedRegion = {
+            ...region,
+            latitudeDelta: 0.008,
+            longitudeDelta: 0.008,
+        };
+
+        // ✨ Anima o zoom até o nível de perimetrização
+        mapRef.current?.animateToRegion(zoomedRegion, 1500);
+
+        setTimeout(() => {
+            setSearched(true);
+
+            // 💡 Gera rotas apenas dentro do perímetro (exemplo simulado)
             const fakeRoutes: RouteData[] = [
                 {
                     id: 1,
@@ -139,8 +101,8 @@ export default function MainPage() {
                     origin: "Origem rota",
                     destination: "Destino rota",
                     path: [
-                        { latitude: latitude - 0.003, longitude: longitude - 0.002 },
-                        { latitude: latitude - 0.001, longitude: longitude + 0.001 },
+                        { latitude: zoomedRegion.latitude - 0.002, longitude: zoomedRegion.longitude - 0.001 },
+                        { latitude: zoomedRegion.latitude + 0.001, longitude: zoomedRegion.longitude + 0.002 },
                     ],
                 },
                 {
@@ -150,139 +112,135 @@ export default function MainPage() {
                     origin: "Origem rota",
                     destination: "Destino rota",
                     path: [
-                        { latitude: latitude - 0.002, longitude: longitude - 0.003 },
-                        { latitude: latitude + 0.001, longitude: longitude + 0.002 },
-                    ],
-                },
-                {
-                    id: 3,
-                    color: "#FFB020",
-                    distance: "600 m",
-                    origin: "Origem rota",
-                    destination: "Destino rota",
-                    path: [
-                        { latitude: latitude - 0.001, longitude: longitude - 0.001 },
-                        { latitude: latitude + 0.002, longitude: longitude + 0.001 },
+                        { latitude: zoomedRegion.latitude - 0.001, longitude: zoomedRegion.longitude - 0.002 },
+                        { latitude: zoomedRegion.latitude + 0.002, longitude: zoomedRegion.longitude + 0.003 },
                     ],
                 },
             ];
             setRoutes(fakeRoutes);
-            setSearched(true);
 
-            // 👇 garante que o painel volte visível a cada nova busca
-            setIsVisible(true);
-            Animated.parallel([
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 350,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(slideAnim, {
-                    toValue: 0,
-                    duration: 400,
-                    easing: Easing.out(Easing.cubic),
-                    useNativeDriver: true,
-                }),
-            ]).start();
-        } catch (err) {
-            console.error("Erro ao buscar local:", err);
-            setAddress("Erro ao buscar endereço");
+            Animated.timing(translateAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }, 1200);
+    };
+
+    const handleSelectRoute = async (routeId: number) => {
+        const clientData = await AsyncStorage.getItem("clientData");
+        if (!clientData) {
+            router.push("/Login");
+            return;
         }
+        alert(`Rota ${routeId} selecionada!`);
     };
 
-    const handleClearSearch = () => {
-        setQuery("");
-        setAddress(null);
-        setRoutes([]);
+    const handleBackToSelect = () => {
         setSearched(false);
-        setUserLocation(null);
-        smoothKeyboardClose();
-        setRegion({
-            latitude: -23.55052,
-            longitude: -46.633308,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-        });
-    };
+        setRoutes([]);
+        setMapLocked(false);
+        setShowConfirm(false);
 
-    const renderRoute = ({ item }: { item: RouteData }) => (
-        <View style={styles.routeCard}>
-            <Text style={styles.routeTitle}>
-                Rota {item.id} <Text style={{ color: item.color }}>■</Text>
-            </Text>
-            <Text style={styles.routeText}>
-                {item.origin} → {item.destination}
-            </Text>
-            <Text style={styles.routeDistance}>{item.distance}</Text>
-            <TouchableOpacity style={styles.routeButton}>
-                <Text style={styles.routeButtonText}>Selecionar</Text>
-            </TouchableOpacity>
-        </View>
-    );
+        // 🔁 Restaura o zoom inicial
+        mapRef.current?.animateToRegion(
+            {
+                latitude: region.latitude,
+                longitude: region.longitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            },
+            1000
+        );
+    };
 
     return (
         <View style={styles.container}>
+            {/* 🌍 Mapa */}
             <MapView
                 ref={mapRef}
                 style={styles.map}
                 region={region}
-                onPress={toggleRoutes}
+                onRegionChangeComplete={(r) => !mapLocked && setRegion(r)}
+                scrollEnabled={!mapLocked}
+                zoomEnabled={!mapLocked}
+                rotateEnabled={!mapLocked}
+                pitchEnabled={!mapLocked}
+                onPanDrag={!mapLocked ? handleMapDrag : undefined}
             >
                 {searched &&
                     routes.map((r) => (
                         <Polyline key={r.id} coordinates={r.path} strokeColor={r.color} strokeWidth={4} />
                     ))}
-                {userLocation && (
-                    <Marker coordinate={userLocation} title="Local encontrado" pinColor="#3A7AFE" />
-                )}
             </MapView>
 
-            {/* 🔍 Caixa de busca fixa */}
-            <View style={styles.fixedSearchBox}>
-                <View style={styles.searchRow}>
-                    <Ionicons name="search" size={20} color="#aaa" />
-                    <TextInput
-                        ref={inputRef}
-                        style={styles.input}
-                        placeholder="Digite o endereço"
-                        placeholderTextColor="#888"
-                        value={query}
-                        keyboardType="default"
-                        returnKeyType="search"
-                        onSubmitEditing={handleSearch}
-                        onChangeText={setQuery}
-                    />
-                    {query.length > 0 && (
-                        <TouchableOpacity onPress={handleClearSearch}>
-                            <Ionicons name="close-circle" size={20} color="#999" />
+            {/* 🔙 Botão voltar */}
+            {mapLocked && (
+                <TouchableOpacity style={styles.backButton} onPress={handleBackToSelect}>
+                    <Ionicons name="arrow-back" size={26} color="#FFF" />
+                </TouchableOpacity>
+            )}
+
+            {/* 📍 Alfinete */}
+            {!searched && (
+                <View style={styles.pinContainer}>
+                    <View style={styles.pinHead} />
+                    <View style={styles.pinStick} />
+                    <View style={styles.pinBase} />
+                </View>
+            )}
+
+            {/* 🔍 Campo de busca */}
+            {!searched && (
+                <View style={styles.fixedSearchBox}>
+                    <View style={styles.searchRow}>
+                        <Ionicons name="search" size={20} color="#aaa" />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Digite o endereço"
+                            placeholderTextColor="#888"
+                            value={query}
+                            onChangeText={setQuery}
+                            returnKeyType="search"
+                            onSubmitEditing={handleSearch}
+                        />
+                        <TouchableOpacity onPress={handleSearch}>
+                            <Ionicons name="arrow-forward-circle-outline" size={22} color="#999" />
                         </TouchableOpacity>
-                    )}
-                    <TouchableOpacity onPress={handleSearch}>
-                        <Ionicons name="arrow-forward-circle-outline" size={22} color="#999" />
+                    </View>
+                </View>
+            )}
+
+            {/* ✅ Painel de confirmação */}
+            {showConfirm && !searched && (
+                <View style={styles.bottomConfirm}>
+                    <TouchableOpacity style={styles.floatingButton} onPress={handleViewRoutes}>
+                        <Ionicons name="navigate" size={18} color="#FFF" />
+                        <Text style={styles.floatingButtonText}>Ver rotas</Text>
                     </TouchableOpacity>
                 </View>
-                {searched && <Text style={styles.addressText}>{address}</Text>}
-            </View>
+            )}
 
-            {/* 📋 Painel de rotas animado */}
+            {/* 📋 Rotas */}
             {searched && (
-                <Animated.View
-                    style={[
-                        styles.bottomSheet,
-                        {
-                            opacity: fadeAnim,
-                            transform: [{ translateY: slideAnim }],
-                        },
-                    ]}
-                    pointerEvents={isVisible ? "auto" : "none"}
-                >
-                    <FlatList
-                        data={routes}
-                        keyExtractor={(i) => i.id.toString()}
-                        renderItem={renderRoute}
-                        keyboardShouldPersistTaps="handled"
-                        showsVerticalScrollIndicator={false}
-                    />
+                <Animated.View style={[styles.bottomSheet, { transform: [{ translateY: translateAnim }] }]}>
+                    {routes.map((r) => (
+                        <View key={r.id} style={styles.routeCard}>
+                            <Text style={styles.routeTitle}>
+                                Rota {r.id} <Text style={{ color: r.color }}>■</Text>
+                            </Text>
+                            <Text style={styles.routeText}>
+                                {r.origin} → {r.destination}
+                            </Text>
+                            <Text style={styles.routeDistance}>{r.distance}</Text>
+                            <TouchableOpacity
+                                style={styles.routeButton}
+                                onPress={() => handleSelectRoute(r.id)}
+                            >
+                                <Text style={styles.routeButtonText}>Selecionar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ))}
                 </Animated.View>
             )}
         </View>
@@ -308,7 +266,61 @@ const styles = StyleSheet.create({
     },
     searchRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     input: { flex: 1, paddingVertical: 4, fontSize: 16, color: "#EAEAEA" },
-    addressText: { color: "#888", marginTop: 4, fontStyle: "italic" },
+
+    pinContainer: {
+        position: "absolute",
+        top: "45%",
+        left: "50%",
+        alignItems: "center",
+        transform: [{ translateX: -10 }],
+    },
+    pinHead: {
+        width: 28,
+        height: 28,
+        backgroundColor: "#FFF",
+        borderRadius: 14,
+        borderWidth: 2,
+        borderColor: "#DDD",
+    },
+    pinStick: {
+        width: 3,
+        height: 18,
+        backgroundColor: "#FFF",
+        marginTop: -2,
+    },
+    pinBase: {
+        width: 6,
+        height: 6,
+        backgroundColor: "#FFF",
+        borderRadius: 3,
+        marginTop: -2,
+    },
+
+    bottomConfirm: {
+        position: "absolute",
+        bottom: 20,
+        left: 20,
+        right: 20,
+        alignItems: "flex-start",
+    },
+    confirmText: { color: "#FFF", fontSize: 15, marginBottom: 8 },
+
+    floatingButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        backgroundColor: "#1A1A1D",
+        borderRadius: 30,
+        paddingVertical: 12,
+        paddingHorizontal: 22,
+        alignSelf: "flex-end",
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 6,
+    },
+    floatingButtonText: { color: "#FFF", fontWeight: "bold", fontSize: 15 },
+
     bottomSheet: {
         position: "absolute",
         bottom: 0,
@@ -319,10 +331,6 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 20,
         padding: 12,
         maxHeight: "40%",
-        shadowColor: "#000",
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        elevation: 10,
     },
     routeCard: {
         backgroundColor: "#222226",
@@ -341,4 +349,13 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     routeButtonText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
+    backButton: {
+        position: "absolute",
+        top: 50,
+        left: 20,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        borderRadius: 50,
+        padding: 10,
+        zIndex: 20,
+    },
 });

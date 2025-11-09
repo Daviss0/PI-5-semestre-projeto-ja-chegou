@@ -48,7 +48,7 @@ public class ClientApiController {
         }
 
         clientService.updateLastAccess(client.getId());
-        return ResponseEntity.ok("Login realizado com sucesso!");
+        return ResponseEntity.ok(client);
     }
 
     @GetMapping("/{id}")
