@@ -1,7 +1,10 @@
 package com.ja.chegou.ja_chegou.controller;
 
+import com.ja.chegou.ja_chegou.DTO.RouteDTO;
 import com.ja.chegou.ja_chegou.entity.Route;
 import com.ja.chegou.ja_chegou.service.RouteService;
+import com.ja.chegou.ja_chegou.service.RouteServiceImpl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -42,6 +45,38 @@ public class RouteController {
                 .collect(Collectors.toList());
     }
 
+
+    @GetMapping("/closest")
+    public ResponseEntity<List<RouteDTO>> getClosestRoutes(
+            @RequestParam double lat,
+            @RequestParam double lon,
+            @RequestParam(required = false, name = "logradouro") String logradouro) {
+
+        List<Route> closest = service.findClosestRoutes(lat, lon);
+
+        if (closest == null || closest.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        List<RouteDTO> routes = closest.stream()
+                .map(r -> {
+                    RouteDTO dto = new RouteDTO(r);
+                    boolean passaNaRua = false;
+                    try {
+                        passaNaRua = ((RouteServiceImpl) service)
+                                .rotaPassaNaRuaDoCliente(r, lat, lon, logradouro);
+                    } catch (Exception e) {
+                        System.err.println("Erro ao verificar rua: " + e.getMessage());
+                    }
+                    dto.setPassaNaRua(passaNaRua);
+                    return dto;
+                })
+                .toList();
+
+        return ResponseEntity.ok(routes);
+    }
+
+
     public record RouteMapDTO(Long id, String name, String originName, List<double[]> coordinates) {
 
         public static RouteMapDTO from(Route r) {
@@ -53,18 +88,17 @@ public class RouteController {
                 if (r.getOrigin() != null) {
                     originLat = r.getOrigin().getLatitude();
                     originLng = r.getOrigin().getLongitude();
-                    originName = r.getOrigin().getName(); // ✅ Nome do centro de origem
+                    originName = r.getOrigin().getName();
                 } else {
-                    System.err.println("⚠️  Rota " + r.getId() + " sem DistributionCenter (origem).");
+                    System.err.println("Rota " + r.getId() + " sem DistributionCenter (origem).");
                 }
             } catch (Exception e) {
-                System.err.println("⚠️  Erro ao obter origem da rota " + r.getId() + ": " + e.getMessage());
+                System.err.println("Erro ao obter origem da rota " + r.getId() + ": " + e.getMessage());
             }
 
             double destLat = r.getDestinationLatitude() != null ? r.getDestinationLatitude() : 0.0;
             double destLng = r.getDestinationLongitude() != null ? r.getDestinationLongitude() : 0.0;
 
-            // Se alguma coordenada for 0.0, evita chamar o OSRM
             if (originLat == 0.0 && originLng == 0.0 && destLat == 0.0 && destLng == 0.0) {
                 return new RouteMapDTO(r.getId(), r.getDestinationAddress(), originName, List.of());
             }
@@ -96,5 +130,20 @@ public class RouteController {
             }
         }
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Route> getRouteById(@PathVariable Long id) {
+        try {
+            Route route = service.findById(id);
+            if (route == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(route);
+        } catch (Exception e) {
+            System.err.println("Erro ao buscar rota por ID " + id + ": " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
 
 }

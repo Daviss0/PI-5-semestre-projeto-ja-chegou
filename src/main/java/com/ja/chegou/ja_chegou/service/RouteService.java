@@ -15,4 +15,8 @@ public interface RouteService {
     List<Route> getRoutesByTruck(Long truckId);
 
     Route findById(Long id);
+
+    double calcularDistancia(double lat1, double lon1, double lat2, double lon2);
+
+    List<Route> findClosestRoutes(double userLat, double userLon);
 }
