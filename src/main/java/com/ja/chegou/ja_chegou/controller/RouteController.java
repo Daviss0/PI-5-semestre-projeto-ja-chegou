@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -138,7 +139,41 @@ public class RouteController {
             if (route == null) {
                 return ResponseEntity.notFound().build();
             }
+
+            if (route.getCoordinates() == null || route.getCoordinates().isEmpty()) {
+
+                double originLat = route.getOriginLatitude();
+                double originLng = route.getOriginLongitude();
+                double destLat = route.getDestinationLatitude();
+                double destLng = route.getDestinationLongitude();
+
+                String url = String.format(
+                        Locale.US,
+                        "http://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson",
+                        originLng, originLat, destLng, destLat
+                );
+
+                RestTemplate rest = new RestTemplate();
+                Map<?, ?> resp = rest.getForObject(url, Map.class);
+
+                if (resp != null && "Ok".equals(resp.get("code"))) {
+                    List<?> routesList = (List<?>) resp.get("routes");
+                    Map<?, ?> firstRoute = (Map<?, ?>) routesList.get(0);
+                    Map<?, ?> geometry = (Map<?, ?>) firstRoute.get("geometry");
+
+                    List<List<Double>> coords = (List<List<Double>>) geometry.get("coordinates");
+
+                    List<Route.Coordenada> coordList = new ArrayList<>();
+                    for (List<Double> c : coords) {
+                        coordList.add(new Route.Coordenada(c.get(1), c.get(0)));
+                    }
+
+                    route.setCoordinates(coordList);
+                }
+            }
+
             return ResponseEntity.ok(route);
+
         } catch (Exception e) {
             System.err.println("Erro ao buscar rota por ID " + id + ": " + e.getMessage());
             return ResponseEntity.internalServerError().build();

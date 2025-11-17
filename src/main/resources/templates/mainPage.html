@@ -192,17 +192,12 @@
 
 <script th:inline="javascript">
 
-  // 🔄 Recarrega dados atualizados caso venha de redirect ou cache
   if (window.performance && window.performance.navigation.type === 2) {
     console.log("Recarregando dados atualizados...");
     window.location.reload(true);
   }
 
-  // 🔄 Remove cache se veio de ?updated=true
-  if (window.location.search.includes("updated=true")) {
-    sessionStorage.removeItem("clientCache");
-    mostrarAvisoTopo("✅ Endereço atualizado com sucesso!");
-  }
+
 
   const API_BASE = location.origin;
   const loggedServer = /*[[${logged}]]*/ false;
@@ -403,6 +398,35 @@
     attribution: "© OpenStreetMap, © CartoDB"
   }).addTo(map);
 
+  // 🚨 Controle de fluxo ao entrar na página
+  if (window.location.search.includes("updated=true")) {
+
+    sessionStorage.removeItem("clientCache");
+
+    fetch(`/api/clients/by-email?email=${encodeURIComponent(clientEmail)}&force=${Date.now()}`)
+            .then(r => r.json())
+            .then(client => {
+              // Atualiza coordenadas globais
+              window.clientLat = client.latitude;
+              window.clientLng = client.longitude;
+              window.clientName = client.name;
+
+              // Centraliza no novo endereço
+              map.setView([client.latitude, client.longitude], 15);
+
+              mostrarAvisoTopo("Endereço atualizado com sucesso!");
+
+              // Agora sim: carrega cliente + rotas
+              carregarCliente();
+            })
+            .catch(() => mostrarAvisoTopo("Erro ao atualizar endereço!"));
+
+  } else {
+
+    // Carrega normalmente
+    carregarCliente();
+  }
+
   const truckIcon = L.icon({
     iconUrl: "/icons/icon-192.png",
     iconSize: [40, 40],
@@ -412,60 +436,70 @@
   let routeLayer = null;
   let truckMarkers = {};
 
-  // --- Buscar coordenadas do cliente ---
-  if (loggedClient && clientEmail) {
-    fetch(`/api/clients/by-email?email=${encodeURIComponent(clientEmail)}&t=${Date.now()}`)
-            .then(r => {
-              if (!r.ok) throw new Error("Erro HTTP " + r.status);
-              return r.json();
-            })
-            .then(async client => {
-              if (client.latitude && client.longitude) {
-                window.clientLat = client.latitude;
-                window.clientLng = client.longitude;
-                window.clientName = client.name;
+  async function carregarCliente() {
+    if (!loggedClient || !clientEmail) return;
 
-                const clientIcon = L.icon({
-                  iconUrl: "https://cdn-icons-png.flaticon.com/512/2776/2776067.png",
-                  iconSize: [38, 38],
-                  iconAnchor: [19, 38],
-                  popupAnchor: [0, -35]
-                });
+    try {
+      // 🔥 SEMPRE busca cliente atualizado, sem cache
+      const r = await fetch(`/api/clients/by-email?email=${encodeURIComponent(clientEmail)}&force=${Date.now()}`);
+      if (!r.ok) throw new Error("Erro HTTP " + r.status);
 
-                const marker = L.marker([clientLat, clientLng], { icon: clientIcon }).addTo(map);
-                marker.bindPopup(`<b>${clientName || "Seu endereço"}</b>`).openPopup();
-                map.setView([clientLat, clientLng], 15);
+      const client = await r.json();
 
-                try {
-                  const res = await fetch(`/api/routes/closest?lat=${clientLat}&lon=${clientLng}`);
-                  if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
-                  const rotas = await res.json();
+      // Se o cliente tem coordenadas válidas
+      if (client.latitude && client.longitude) {
 
-                  console.log("Rotas mais próximas:", rotas);
+        // 🔥 Atualiza coordenadas globais (usadas em showRoutes, closest, etc.)
+        window.clientLat = client.latitude;
+        window.clientLng = client.longitude;
+        window.clientName = client.name;
 
-                  rotas.forEach((r, i) => {
-                    const colors = ["#00ff9d", "#ffa500", "#0099ff"];
-                    if (r.coordinates && r.coordinates.length > 0) {
-                      const layer = L.polyline(r.coordinates, { color: colors[i], weight: 4 }).addTo(map);
-                      layer.bindPopup(`<b>${r.destinationAddress}</b><br>Distância: ${r.distanceToUser.toFixed(2)} km`);
-                    }
-                  });
+        // 🔥 Atualiza o marcador no mapa
+        const clientIcon = L.icon({
+          iconUrl: "https://cdn-icons-png.flaticon.com/512/2776/2776067.png",
+          iconSize: [38, 38],
+          iconAnchor: [19, 38],
+          popupAnchor: [0, -35]
+        });
 
-                  if (rotas.length > 0) {
-                    mostrarAvisoTopo(`Encontramos ${rotas.length} rotas próximas da sua casa!`);
-                  }
+        const marker = L.marker([clientLat, clientLng], { icon: clientIcon }).addTo(map);
+        marker.bindPopup(`<b>${clientName || "Seu endereço"}</b>`).openPopup();
+        map.setView([clientLat, clientLng], 15);
 
-                } catch (e) {
-                  console.error("Erro ao buscar rotas próximas:", e);
-                }
-              }
-            })
-            .catch(err => console.error("Erro ao buscar cliente:", err));
+        // 🔥 Buscar rotas mais próximas usando coordenada ATUALIZADA
+        try {
+          const res = await fetch(`/api/routes/closest?lat=${clientLat}&lon=${clientLng}&force=${Date.now()}`);
+          if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
+
+          const rotas = await res.json();
+          console.log("Rotas mais próximas:", rotas);
+
+          // Exibir rotas destacadas
+          rotas.forEach((r, i) => {
+            const colors = ["#00ff9d", "#ffa500", "#0099ff"];
+            if (r.coordinates && r.coordinates.length > 0) {
+              const layer = L.polyline(r.coordinates, { color: colors[i], weight: 4 }).addTo(map);
+              layer.bindPopup(`<b>${r.destinationAddress}</b><br>Distância: ${r.distanceToUser.toFixed(2)} km`);
+            }
+          });
+
+          // 🔥 Apenas avisar se estiver dentro de 1 km
+          const rotasProximas = rotas.filter(r => r.distanceToUser <= 1);
+
+          if (rotasProximas.length > 0) {
+            mostrarAvisoTopo(`Encontramos ${rotasProximas.length} rota(s) próxima(s) da sua casa!`);
+          }
+
+        } catch (e) {
+          console.error("Erro ao buscar rotas próximas:", e);
+        }
+      }
+
+    } catch (err) {
+      console.error("Erro ao carregar cliente:", err);
+    }
   }
 
-
-  // --- Exibir rotas mais próximas ---
-  // --- Exibir rotas com destaque para as mais próximas ---
   async function showRoutes() {
     if (!clientLat || !clientLng) {
       mostrarAvisoTopo("⚠️ Localização do cliente não disponível.");
@@ -473,20 +507,10 @@
     }
 
     try {
-      // 🔹 Busca rotas mais próximas
       const resClosest = await fetch(`/api/routes/closest?lat=${clientLat}&lon=${clientLng}`);
       if (!resClosest.ok) throw new Error(`Erro HTTP ${resClosest.status}`);
       const closestRoutes = await resClosest.json();
 
-      // ✅ Verifica se alguma rota passa pela rua do cliente
-      for (const r of closestRoutes) {
-        if (r.passaNaRua) {
-          mostrarAvisoTopo(`✅ A rota "${r.destinationAddress}" passa pela sua rua!`);
-          break;
-        }
-      }
-
-      // 🔹 Busca todas as rotas (como antes)
       const resAll = await fetch(API_BASE + "/api/routes/public", { credentials: "include" });
       if (!resAll.ok) throw new Error(`Erro HTTP ${resAll.status}`);
       const allRoutes = await resAll.json();
@@ -494,46 +518,50 @@
       const list = document.getElementById("routeList");
       list.innerHTML = "";
 
-      // --- 🔥 Rotas mais próximas ---
-      if (closestRoutes.length > 0) {
+      const rotasValidas = closestRoutes.filter(r => r.distanceToUser <= 1);
+
+      if (rotasValidas.length === 0) {
+
+        const msg = document.createElement("div");
+        msg.className = "text-danger fw-bold text-center mb-3";
+        msg.innerText = "Não existem rotas próximas ao endereço cadastrado.";
+        list.appendChild(msg);
+
+      } else {
+
         const header = document.createElement("div");
         header.className = "text-warning fw-bold text-center mb-2";
         header.innerText = "🔥 Rotas mais próximas de você:";
         list.appendChild(header);
 
-        closestRoutes.forEach(r => {
+        rotasValidas.forEach(r => {
           const item = document.createElement("button");
           item.className = "list-group-item list-group-item-action bg-warning text-dark border-0 mb-1";
 
-          // 🔹 cor de destaque conforme proximidade
           let corDist = r.distanceToUser < 0.5
-                  ? "#00ff9d"   // muito perto
-                  : r.distanceToUser < 1.5
-                          ? "#ffcc00"   // média
-                          : "#ff6666";  // mais distante
+                  ? "#00ff9d"
+                  : r.distanceToUser < 1.0
+                          ? "#ffcc00"
+                          : "#ff6666";
 
-          // 🔹 texto explicativo no lugar de "Distância"
           item.innerHTML = `
-          <b>${r.destinationAddress}</b>
-       <small class="d-block" style="color:#000;">
-  <span style="color:${corDist};">📍</span>
-  A rota passa a cerca de ${(r.distanceToUser * 1000).toFixed(0)} metros do seu endereço
-</small>
-        `;
+                    <b>${r.destinationAddress}</b>
+                    <small class="d-block" style="color:#000;">
+                        <span style="color:${corDist};">📍</span>
+                        A rota passa a cerca de ${(r.distanceToUser * 1000).toFixed(0)} metros do seu endereço
+                    </small>
+                `;
 
           item.addEventListener("click", async () => {
             try {
-              // Busca rota completa antes de desenhar
-              const res = await fetch(`${API_BASE}/api/routes/${r.id}`);
-              if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
-              const rotaCompleta = await res.json();
-
+              const rotaCompleta = allRoutes.find(rt => rt.id === r.id);
               drawRoute(rotaCompleta);
             } catch (err) {
               console.error("Erro ao buscar rota completa:", err);
               alert("Não foi possível carregar os detalhes desta rota.");
             }
           });
+
           list.appendChild(item);
         });
 
@@ -542,7 +570,6 @@
         list.appendChild(divider);
       }
 
-      // --- 🌍 Todas as demais rotas ---
       const headerAll = document.createElement("div");
       headerAll.className = "text-info fw-bold text-center mb-2";
       headerAll.innerText = "🌍 Todas as rotas disponíveis:";
@@ -556,10 +583,8 @@
         list.appendChild(item);
       });
 
-      // 🔹 Exibe o modal com as rotas
       bootstrap.Modal.getOrCreateInstance(document.getElementById("rotasModal")).show();
 
-      // 🔹 Atualiza a lista flutuante no mapa
       listarRotasProximas();
 
     } catch (e) {
@@ -569,7 +594,6 @@
   }
 
 
-  // 📋 Exibir lista flutuante com rotas próximas e todas as demais
   async function listarRotasProximas() {
     const box = document.getElementById("listaRotasProximas");
     if (!box) return;
@@ -578,14 +602,12 @@
     box.style.display = "block";
 
     try {
-      // 🔹 Buscar rotas mais próximas
       const resClosest = await fetch(`/api/routes/closest?lat=${clientLat}&lon=${clientLng}`);
       if (!resClosest.ok) throw new Error(`Erro HTTP ${resClosest.status}`);
       const closest = await resClosest.json();
 
       let html = "";
 
-      // 🔥 Exibe apenas as 3 rotas mais próximas
       if (closest.length > 0) {
         html += `<div class="fw-bold text-warning mb-1">🔥 Rotas mais próximas de você:</div>`;
 

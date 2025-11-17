@@ -28,15 +28,39 @@ public class RouteServiceImpl implements RouteService{
 
     @Override
     public Route save(Route route) {
-     if(route.getDestinationLatitude() == null ||
-        route.getDestinationLongitude() == null ||
-        route.getDistanceKm() == null || route.getDistanceKm() <= 0 ||
-        route.getDurationMin() == null || route.getDurationMin() <= 0) {
-         throw new IllegalArgumentException("Dados de rota invalidos");
-     }
+
+        if (route.getOrigin() == null) {
+            throw new IllegalArgumentException("A rota deve ter uma central de origem.");
+        }
+
+        if (route.getOrigin().getLatitude() == null || route.getOrigin().getLongitude() == null) {
+            throw new IllegalArgumentException("A central de origem deve possuir latitude e longitude.");
+        }
+
+        route.setOriginLatitude(route.getOrigin().getLatitude());
+        route.setOriginLongitude(route.getOrigin().getLongitude());
+
+        if (route.getDestinationLatitude() == null ||
+                route.getDestinationLongitude() == null) {
+
+            throw new IllegalArgumentException("A rota deve possuir latitude e longitude de destino.");
+        }
+
+        route.setOriginLatitude(Double.parseDouble(route.getOriginLatitude().toString().replace(",", ".")));
+        route.setOriginLongitude(Double.parseDouble(route.getOriginLongitude().toString().replace(",", ".")));
+        route.setDestinationLatitude(Double.parseDouble(route.getDestinationLatitude().toString().replace(",", ".")));
+        route.setDestinationLongitude(Double.parseDouble(route.getDestinationLongitude().toString().replace(",", ".")));
+
+
+        if (route.getDistanceKm() == null || route.getDistanceKm() <= 0 ||
+                route.getDurationMin() == null || route.getDurationMin() <= 0) {
+
+            throw new IllegalArgumentException("Dados de rota inválidos: distância e duração devem ser positivos.");
+        }
+
         return routeRepository.save(route);
     }
-
+    
     @Override
     public void delete(Long id) {
         routeRepository.deleteById(id);
@@ -52,11 +76,17 @@ public class RouteServiceImpl implements RouteService{
         if (id == null) {
             throw new IllegalArgumentException("ID da rota não pode ser nulo");
         }
-        return routeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Rota " + id + " não encontrada"));
-   }
 
-   @Override
+        Route r = routeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Rota " + id + " não encontrada"));
+
+        gerarCoordenadasSeNecessario(r);
+
+        return r;
+    }
+
+
+    @Override
    public double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {
         final int R = 6371; // Raio da Terra em km
         double dLat = Math.toRadians(lat2 - lat1);
@@ -72,7 +102,6 @@ public class RouteServiceImpl implements RouteService{
     public List<Route> findClosestRoutes(double userLat, double userLon) {
         List<Route> allRoutes = routeRepository.findAll();
 
-        // 🔹 Filtra apenas rotas válidas
         allRoutes = allRoutes.stream()
                 .filter(r -> r.getDestinationLatitude() != null && r.getDestinationLongitude() != null)
                 .collect(Collectors.toList());
@@ -85,92 +114,44 @@ public class RouteServiceImpl implements RouteService{
             double menorDist = Double.MAX_VALUE;
 
             try {
-                // 🔧 Corrige origem nula usando o DistributionCenter vinculado
                 if ((r.getOriginLatitude() == null || r.getOriginLongitude() == null) && r.getOrigin() != null) {
                     if (r.getOrigin().getLatitude() != null && r.getOrigin().getLongitude() != null) {
                         r.setOriginLatitude(r.getOrigin().getLatitude());
                         r.setOriginLongitude(r.getOrigin().getLongitude());
-                        System.out.println("✅ Corrigida origem da rota " + r.getId() +
-                                " para (" + r.getOriginLatitude() + ", " + r.getOriginLongitude() + ")");
                     }
                 }
 
-                // ✅ Buscar coordenadas via OSRM se ainda não estiverem carregadas
-                if (r.getCoordinates() == null || r.getCoordinates().isEmpty()) {
-                    String url = String.format(
-                            Locale.US,
-                            "http://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson",
-                            r.getOriginLongitude(), r.getOriginLatitude(),
-                            r.getDestinationLongitude(), r.getDestinationLatitude()
-                    );
+                gerarCoordenadasSeNecessario(r);
 
-                    System.out.println("Consulta OSRM: " + url);
-                    RestTemplate rest = new RestTemplate();
-                    Map<?, ?> response = rest.getForObject(url, Map.class);
-
-                    if (response != null && "Ok".equals(response.get("code"))) {
-                        List<?> routesList = (List<?>) response.get("routes");
-                        if (routesList != null && !routesList.isEmpty()) {
-                            Map<?, ?> firstRoute = (Map<?, ?>) routesList.get(0);
-                            Map<?, ?> geometry = (Map<?, ?>) firstRoute.get("geometry");
-
-                            if (geometry != null && geometry.containsKey("coordinates")) {
-                                List<List<Double>> coords = (List<List<Double>>) geometry.get("coordinates");
-
-                                List<Route.Coordenada> coordList = new ArrayList<>();
-                                for (List<Double> coord : coords) {
-                                    // ⚠️ ordem no OSRM: [lon, lat]
-                                    coordList.add(new Route.Coordenada(coord.get(1), coord.get(0)));
-                                }
-
-                                r.setCoordinates(coordList);
-                                System.out.println("→ Coordenadas carregadas para rota " + r.getId() +
-                                        ": " + coordList.size());
-                            } else {
-                                System.err.println("⚠️ Nenhuma geometria encontrada para rota " + r.getId());
-                            }
-                        } else {
-                            System.err.println("⚠️ Resposta OSRM sem 'routes' para rota " + r.getId());
-                        }
-                    } else {
-                        System.err.println("⚠️ Falha na consulta OSRM para rota " + r.getId());
-                    }
-                }
-
-                // ✅ Agora calcula distância até o ponto mais próximo da rota
                 if (r.getCoordinates() != null && !r.getCoordinates().isEmpty()) {
                     for (Route.Coordenada p : r.getCoordinates()) {
                         double dist = calcularDistancia(userLat, userLon, p.getLat(), p.getLng());
                         if (dist < menorDist) menorDist = dist;
                     }
                 } else {
-                    // 🔹 Fallback (origem/destino)
                     if (r.getOriginLatitude() != null && r.getOriginLongitude() != null) {
-                        double distOrigem = calcularDistancia(userLat, userLon,
-                                r.getOriginLatitude(), r.getOriginLongitude());
-                        menorDist = Math.min(menorDist, distOrigem);
+                        menorDist = Math.min(menorDist,
+                                calcularDistancia(userLat, userLon, r.getOriginLatitude(), r.getOriginLongitude()));
                     }
                     if (r.getDestinationLatitude() != null && r.getDestinationLongitude() != null) {
-                        double distDestino = calcularDistancia(userLat, userLon,
-                                r.getDestinationLatitude(), r.getDestinationLongitude());
-                        menorDist = Math.min(menorDist, distDestino);
+                        menorDist = Math.min(menorDist,
+                                calcularDistancia(userLat, userLon, r.getDestinationLatitude(), r.getDestinationLongitude()));
                     }
                 }
 
             } catch (Exception e) {
-                System.err.println("Erro ao calcular distância da rota " + r.getId() + ": " + e.getMessage());
+                System.err.println("Erro na rota " + r.getId() + ": " + e.getMessage());
             }
 
-            // 🔸 Define distância final
             r.setDistanceToUser(menorDist == Double.MAX_VALUE ? 9999.0 : menorDist);
         });
 
-        // 🔹 Ordena e retorna as 3 mais próximas
         return allRoutes.stream()
                 .sorted(Comparator.comparingDouble(Route::getDistanceToUser))
                 .limit(3)
                 .collect(Collectors.toList());
     }
+
 
     public boolean rotaPassaNaRuaDoCliente(Route route, double clientLat, double clientLon, String logradouroCliente) {
         try {
@@ -211,4 +192,58 @@ public class RouteServiceImpl implements RouteService{
         }
     }
 
+    @Override
+    public void gerarCoordenadasSeNecessario(Route r) {
+
+        if (r == null) return;
+
+        if (r.getCoordinates() != null && !r.getCoordinates().isEmpty()) {
+            return;
+        }
+
+        try {
+            Double originLat = r.getOriginLatitude();
+            Double originLng = r.getOriginLongitude();
+            Double destLat = r.getDestinationLatitude();
+            Double destLng = r.getDestinationLongitude();
+
+            if (originLat == null || originLng == null || destLat == null || destLng == null) {
+                System.err.println("⚠️ Rota " + r.getId() + " sem coordenadas válidas.");
+                return;
+            }
+
+            String url = String.format(
+                    Locale.US,
+                    "http://router.project-osrm.org/route/v1/driving/%f,%f;%f,%f?overview=full&geometries=geojson",
+                    originLng, originLat, destLng, destLat
+            );
+
+            RestTemplate rest = new RestTemplate();
+            Map<?, ?> response = rest.getForObject(url, Map.class);
+
+            if (response != null && "Ok".equals(response.get("code"))) {
+                List<?> routesList = (List<?>) response.get("routes");
+                Map<?, ?> firstRoute = (Map<?, ?>) routesList.get(0);
+                Map<?, ?> geometry = (Map<?, ?>) firstRoute.get("geometry");
+
+                List<List<Double>> coords = (List<List<Double>>) geometry.get("coordinates");
+
+                List<Route.Coordenada> coordList = new ArrayList<>();
+                for (List<Double> c : coords) {
+                    coordList.add(new Route.Coordenada(c.get(1), c.get(0))); // lat, lng
+                }
+
+                r.setCoordinates(coordList);
+
+                System.out.println("Coordenadas geradas para rota " + r.getId() +
+                        " (" + coordList.size() + " pontos)");
+
+            } else {
+                System.err.println("Falha na consulta OSRM para rota " + r.getId());
+            }
+
+        } catch (Exception e) {
+            System.err.println("Erro ao gerar coordenadas: " + e.getMessage());
+        }
+    }
 }

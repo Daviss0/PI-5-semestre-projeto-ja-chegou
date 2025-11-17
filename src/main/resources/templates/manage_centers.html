@@ -22,7 +22,8 @@
         <div class="col-md-4">
           <label for="address" class="form-label">Endereço</label>
           <input type="text" id="address" th:field="*{address}"
-                 class="form-control" placeholder="Digite o endereço" required>
+                 class="form-control" placeholder="Digite o endereço"
+                 required onblur="buscarCoordenadas()">
         </div>
 
         <div class="col-md-2">
@@ -81,6 +82,24 @@
     </table>
   </div>
 </div>
+
+<script>
+  async function buscarCoordenadas() {
+    const endereco = document.getElementById("address").value;
+    if (!endereco) return;
+
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}`;
+
+    const resp = await fetch(url);
+    const dados = await resp.json();
+
+    if (dados.length > 0) {
+      document.getElementById("latitude").value = dados[0].lat;
+      document.getElementById("longitude").value = dados[0].lon;
+    }
+  }
+</script>
+
 
 </body>
 </html>

@@ -27,6 +27,12 @@ public class DistributionCenterServiceImpl implements DistributionCenterService{
 
     @Override
     public DistributionCenter save(DistributionCenter center) {
+
+        if (center.getLatitude() == null || center.getLongitude() == null) {
+            throw new IllegalArgumentException(
+                    "O centro de distribuição deve possuir latitude e longitude."
+            );
+        }
         return distributionCenterRepository.save(center);
     }
 

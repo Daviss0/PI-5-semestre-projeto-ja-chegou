@@ -16,11 +16,10 @@ public class Route {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ====== Origem ======
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "distribution_center_id", nullable = false)
-    @NotNull(message = "A rota deve ter uma central de origem")
     private DistributionCenter origin;
+
 
     // 🔹 Coordenadas da origem (pode ser populada a partir do DistributionCenter)
     private Double originLatitude;
