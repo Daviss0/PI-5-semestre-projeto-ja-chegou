@@ -1,7 +1,6 @@
 package com.ja.chegou.ja_chegou.controller;
 
 import com.ja.chegou.ja_chegou.entity.Route;
-import com.ja.chegou.ja_chegou.entity.Truck;
 import com.ja.chegou.ja_chegou.service.DistributionCenterService;
 import com.ja.chegou.ja_chegou.service.RouteService;
 import com.ja.chegou.ja_chegou.service.TruckService;
@@ -17,7 +16,9 @@ public class RouteViewController {
     private final DistributionCenterService centerService;
     private final TruckService truckService;
 
-    public RouteViewController(RouteService routeService, DistributionCenterService centerService, TruckService truckService) {
+    public RouteViewController(RouteService routeService,
+                               DistributionCenterService centerService,
+                               TruckService truckService) {
         this.routeService = routeService;
         this.centerService = centerService;
         this.truckService = truckService;
@@ -28,14 +29,11 @@ public class RouteViewController {
         model.addAttribute("centers", centerService.findAll());
         model.addAttribute("routes", routeService.findAll());
         model.addAttribute("route", new Route());
-        model.addAttribute("trucks", truckService.findAll());
         return "manage_routes";
     }
-    
+
     @PostMapping("/manage")
-    public String saveRoute(@ModelAttribute Route route, @RequestParam Long truckId) {
-        Truck truck = truckService.findById(truckId);
-        route.setTruck(truck);
+    public String saveRoute(@ModelAttribute Route route) {
         routeService.save(route);
         return "redirect:/routes/manage";
     }
@@ -49,5 +47,11 @@ public class RouteViewController {
     @GetMapping("/menu")
     public String menuRoutes() {
         return "menu_routes";
+    }
+
+    @GetMapping("/monitoring")
+    public String generalMonitoring(Model model) {
+        model.addAttribute("routes", routeService.findAll());
+        return "general_monitoring";
     }
 }

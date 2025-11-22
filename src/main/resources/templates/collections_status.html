@@ -3,64 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <title>Status das Coletas</title>
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
   <meta th:if="${_csrf != null}" name="_csrf" th:content="${_csrf.token}">
   <meta th:if="${_csrf != null}" name="_csrf_header" th:content="${_csrf.headerName}">
-  <style>
-    .truck-marker {
-      font-size: 28px;
-      line-height: 1;
-      transform: translate(-50%, -50%) rotate(0deg);
-      will-change: transform;
-      user-select: none;
-    }
-    .leaflet-marker-icon {
-      background: none !important;
-      border: none !important;
-    }
-  </style>
 </head>
+
 <body class="bg-light">
+
 <div class="container mt-4">
+
   <h2 class="text-primary mb-3">Status das Coletas</h2>
-  
 
-  <div th:if="${msg}" class="alert alert-success alert-dismissible fade show" role="alert">
+  <!-- Mensagens -->
+  <div th:if="${msg}" class="alert alert-success alert-dismissible fade show">
     <span th:text="${msg}"></span>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   </div>
 
-  <div th:if="${err}" class="alert alert-warning alert-dismissible fade show" role="alert">
+  <div th:if="${err}" class="alert alert-warning alert-dismissible fade show">
     <span th:text="${err}"></span>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   </div>
 
+  <!-- Filtros -->
   <form class="row g-2 mb-3" method="get" th:action="@{/collections/status}">
     <div class="col-md-3">
       <label class="form-label">Status</label>
       <select class="form-select" name="status">
         <option value="">Todos</option>
-        <option th:each="s : ${statusValues}" th:value="${s}" th:text="${s}"
-                th:selected="${statusFilter} == s"></option>
+        <option th:each="s : ${statusValues}" th:value="${s}" th:text="${s}" th:selected="${statusFilter} == s"></option>
       </select>
     </div>
+
     <div class="col-md-3">
       <label class="form-label">De</label>
       <input type="date" class="form-control" name="from" th:value="${from}">
     </div>
+
     <div class="col-md-3">
       <label class="form-label">Até</label>
       <input type="date" class="form-control" name="to" th:value="${to}">
     </div>
+
     <div class="col-md-3 d-flex align-items-end">
       <button class="btn btn-outline-primary w-100">Filtrar</button>
     </div>
   </form>
 
+  <!-- Agendamento -->
   <div class="card shadow-sm p-3 mb-4">
     <h5 class="mb-3">Agendar coleta</h5>
+
     <form class="row g-2" method="post" th:action="@{/collections/schedule}">
       <div class="col-md-3">
         <label class="form-label">Rota</label>
@@ -68,25 +65,20 @@
           <option value="">Selecione...</option>
           <option th:each="r : ${routes}"
                   th:value="${r.id}"
-                  th:text="${r.origin.name + ' → ' + r.destinationAddress}"
+                  th:text="'Linha ' + ${r.codigoLinhaOlhoVivo}"
                   th:selected="${prefRouteId != null and r.id == prefRouteId}">
           </option>
         </select>
       </div>
+
       <div class="col-md-3">
-        <label class="form-label" for="truckId">Caminhão</label>
-        <select id="truckId"
-                class="form-select"
-                name="truckId"
-                required
-                th:classappend="${errField}=='truckId' ? ' is-invalid'">
+        <label class="form-label">Caminhão</label>
+        <select class="form-select" name="truckId" required>
           <option value="">Selecione...</option>
-          <option th:each="t : ${trucks}"
-                  th:value="${t.id}"
-                  th:text="${t.plate + ' - ' + t.model}">
-          </option>
+          <option th:each="t : ${trucks}" th:value="${t.id}" th:text="${t.plate + ' - ' + t.model}"></option>
         </select>
       </div>
+
       <div class="col-md-3">
         <label class="form-label">Motorista</label>
         <select class="form-select" name="driverId" required>
@@ -94,51 +86,62 @@
           <option th:each="d : ${drivers}" th:value="${d.id}" th:text="${d.name}"></option>
         </select>
       </div>
+
       <div class="col-md-3">
         <label class="form-label">Data/Hora</label>
         <input type="datetime-local" class="form-control" name="when" required>
       </div>
+
       <div class="col-12">
         <label class="form-label">Observações</label>
         <input type="text" class="form-control" name="notes" placeholder="Opcional">
       </div>
+
       <div class="col-12 text-end">
         <button class="btn btn-success mt-2">Agendar</button>
       </div>
     </form>
   </div>
 
+  <!-- Lista -->
   <div class="card shadow-sm p-3">
+
     <table class="table table-hover align-middle">
       <thead>
       <tr>
-        <th>#</th><th>Rota</th><th>Agendada</th><th>Início</th><th>Fim</th>
-        <th>Status</th><th>Caminhão</th><th>Motorista</th><th class="text-center">Ações</th>
+        <th>#</th>
+        <th>Rota</th>
+        <th>Agendada</th>
+        <th>Início</th>
+        <th>Fim</th>
+        <th>Status</th>
+        <th>Caminhão</th>
+        <th>Motorista</th>
+        <th class="text-center">Ações</th>
       </tr>
       </thead>
+
       <tbody>
-      <tr th:each="c : ${collections}" th:attr="data-row-id=${c.id}">
+
+      <tr th:each="c : ${collections}">
         <td th:text="${c.id}"></td>
 
         <td>
-          <span th:text="${c.route.origin.name}"></span> &rarr;
-          <span th:text="${c.route.destinationAddress}"></span>
+          <b>Linha SPTrans </b>
+          <span th:text="${c.route.codigoLinhaOlhoVivo}"></span>
         </td>
 
         <td th:text="${#temporals.format(c.scheduledAt, 'dd/MM HH:mm')}"></td>
 
-        <td data-col-started
-            th:text="${c.startedAt != null ? #temporals.format(c.startedAt, 'dd/MM HH:mm') : '-'}"></td>
+        <td th:text="${c.startedAt != null ? #temporals.format(c.startedAt, 'dd/MM HH:mm') : '-'}"></td>
 
         <td th:text="${c.finishedAt != null ? #temporals.format(c.finishedAt, 'dd/MM HH:mm') : '-'}"></td>
 
         <td>
-        <span data-col-status
-              th:classappend="${c.status.name()=='AGENDADA' ? 'badge bg-secondary' :
-                               c.status.name()=='EM_ANDAMENTO' ? 'badge bg-primary' :
-                               c.status.name()=='CONCLUIDA' ? 'badge bg-success' : 'badge bg-danger'}"
-              th:text="${c.status}">
-        </span>
+          <span th:classappend="${c.status.name()=='AGENDADA' ? 'badge bg-secondary' :
+                                c.status.name()=='EM_ANDAMENTO' ? 'badge bg-primary' :
+                                c.status.name()=='CONCLUIDA' ? 'badge bg-success' : 'badge bg-danger'}"
+                th:text="${c.status}"></span>
         </td>
 
         <td th:text="${c.truck.plate}"></td>
@@ -146,31 +149,11 @@
 
         <td class="text-center">
           <button class="btn btn-outline-primary btn-sm"
-                  th:data-orilat="${#numbers.formatDecimal(c.route.origin.latitude, 0, 'POINT', 6, 'POINT')}"
-                  th:data-orilon="${#numbers.formatDecimal(c.route.origin.longitude, 0, 'POINT', 6, 'POINT')}"
-                  th:data-destlat="${#numbers.formatDecimal(c.route.destinationLatitude, 0, 'POINT', 6, 'POINT')}"
-                  th:data-destlon="${#numbers.formatDecimal(c.route.destinationLongitude, 0, 'POINT', 6, 'POINT')}"
-                  th:data-originname="${c.route.origin.name}"
-                  onclick="verRota(this)">
-            Ver
-          </button>
-
-          <button type="button"
-                  class="btn btn-outline-warning btn-sm"
-                  data-action-start
-                  th:data-id="${c.id}"
-                  th:data-start-lat="${#numbers.formatDecimal(c.route.origin.latitude, 0, 'POINT', 6, 'POINT')}"
-                  th:data-start-lng="${#numbers.formatDecimal(c.route.origin.longitude, 0, 'POINT', 6, 'POINT')}"
-                  th:data-end-lat="${#numbers.formatDecimal(c.route.destinationLatitude, 0, 'POINT', 6, 'POINT')}"
-                  th:data-end-lng="${#numbers.formatDecimal(c.route.destinationLongitude, 0, 'POINT', 6, 'POINT')}"
-                  th:data-speed="${c.route.averageSpeed}"
-                  th:if="${c.status.name() == 'AGENDADA'}"
-                  th:onclick="|iniciar(${c.id})|">
-            Iniciar
+                  th:onclick="|monitorarLinha(${c.route.codigoLinhaOlhoVivo}, ${c.client.latitude}, ${c.client.longitude})|">
+            Monitorar
           </button>
 
           <button class="btn btn-success btn-sm"
-                  data-action-finish
                   th:if="${c.status.name() == 'EM_ANDAMENTO'}"
                   data-bs-toggle="modal"
                   th:attr="data-bs-target=${'#finishModal-' + c.id}">
@@ -180,264 +163,168 @@
           <form th:action="@{'/collections/' + ${c.id} + '/cancel'}"
                 method="post" class="d-inline"
                 th:if="${c.status.name() != 'CONCLUIDA' && c.status.name() != 'CANCELADA'}">
+
             <input th:if="${_csrf != null}" type="hidden"
                    th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
             <input type="hidden" name="reason" value="Cancelado via backoffice">
+
             <button class="btn btn-outline-danger btn-sm" type="submit">Cancelar</button>
           </form>
         </td>
+
       </tr>
 
       <tr th:if="${#lists.isEmpty(collections)}">
         <td colspan="9" class="text-center text-muted">Nenhuma coleta encontrada.</td>
       </tr>
+
       </tbody>
     </table>
   </div>
 
-
   <div id="map" class="mt-3" style="height: 380px;"></div>
-</div>
 
-<div th:each="c : ${collections}">
-  <div class="modal fade" th:id="${'finishModal-' + c.id}" tabindex="-1">
-    <div class="modal-dialog">
-      <form class="modal-content" th:action="@{'/collections/' + ${c.id} + '/finish'}" method="post">
-        <div class="modal-header">
-          <h5 class="modal-title">Concluir coleta #<span th:text="${c.id}"></span></h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <label class="form-label">Peso coletado (kg)</label>
-          <input class="form-control mb-2" type="number" step="0.01" name="weightKg" placeholder="Opcional">
-          <label class="form-label">Observações</label>
-          <textarea class="form-control" name="notes" rows="3" placeholder="Opcional"></textarea>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-success">Concluir</button>
-        </div>
-      </form>
-    </div>
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script th:inline="javascript">
-  const CTX = /*[[@{/}]]*/ '/';
-  const OSRM_PROXY = /*[[@{/api/osrm/route}]]*/ '/api/osrm/route';
-  const START_URL_TPL = CTX + 'collections/__ID__/start';
 
-  // === Mapa ===
-  var map = L.map('map').setView([-23.55, -46.63], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          { attribution: '© OpenStreetMap' }
-  ).addTo(map);
+<script>
 
-  var routeLayer, originMarker, destMarker, truckMarker;
+  let map = L.map('map').setView([-23.55, -46.63], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
 
-  const originIcon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/252/252025.png', iconSize: [36,36], iconAnchor: [18,36] });
-  const destIcon   = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [36,36], iconAnchor: [18,36] });
+  /* ===========================================================
+     🔵 CAMADAS DO MAPA
+  =========================================================== */
+  let shapeLayer = null;      // polyline do trajeto real SPTrans
+  let truckMarkers = [];      // caminhões monitorados
+  let monitorTimer = null;    // timer para atualizar realtime
 
-  // === Ver rota (apenas desenha a polyline e marcadores origem/destino) ===
-  function verRota(el){
-    const originLat = parseFloat(el.getAttribute('data-orilat'));
-    const originLon = parseFloat(el.getAttribute('data-orilon'));
-    const destLat   = parseFloat(el.getAttribute('data-destlat'));
-    const destLon   = parseFloat(el.getAttribute('data-destlon'));
-    const originName= el.getAttribute('data-originname') || 'Origem';
+  /* ===========================================================
+     🔥 FUNÇÃO: Desenhar o SHAPE real salvo no banco
+  =========================================================== */
+  function desenharShapeDaRota(route) {
+    if (!route.coordinates || route.coordinates.length === 0) return;
 
-    if ([originLat,originLon,destLat,destLon].some(Number.isNaN)) {
-      alert('Coordenadas inválidas para esta rota.');
-      return;
-    }
+    if (shapeLayer) map.removeLayer(shapeLayer);
 
-    const url = `${OSRM_PROXY}?coordinates=${originLon},${originLat};${destLon},${destLat}&overview=full&geometries=geojson&steps=true`;
+    const latlngs = route.coordinates.map(c => [c.lat, c.lng]);
 
-    fetch(url)
-            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-            .then(data => {
-              if (!data || data.code !== 'Ok' || !data.routes?.length) { alert('Rota não encontrada.'); return; }
+    shapeLayer = L.polyline(latlngs, {
+      color: "#1E90FF",
+      weight: 6,
+      opacity: 0.85
+    }).addTo(map);
 
-              if (routeLayer) map.removeLayer(routeLayer);
-              if (originMarker) map.removeLayer(originMarker);
-              if (destMarker) map.removeLayer(destMarker);
-
-              const latlngs = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-              routeLayer = L.polyline(latlngs, { weight: 5 }).addTo(map);
-              originMarker = L.marker([originLat, originLon], { icon: originIcon }).addTo(map).bindPopup('Central de Origem: ' + originName);
-              destMarker   = L.marker([destLat, destLon], { icon: destIcon }).addTo(map).bindPopup('Destino');
-              map.fitBounds(routeLayer.getBounds(), { padding:[30,30] });
-              map.setZoom(Math.min(map.getZoom(), 13));
-            })
-            .catch(err => { console.error('Erro OSRM:', err); alert('Falha ao consultar o serviço de rotas.'); });
+    map.fitBounds(shapeLayer.getBounds(), { padding: [40, 40] });
   }
 
-  // === Atualiza elementos da linha para "Em andamento" ===
-  function updateRowUIToRunning(id){
-    const row = document.querySelector('[data-row-id="' + id + '"]');
-    if (!row) return;
-
-    const statusEl  = row.querySelector('[data-col-status]');
-    const startedEl = row.querySelector('[data-col-started]');
-    if (statusEl) { statusEl.textContent = 'EM_ANDAMENTO'; statusEl.className = 'badge bg-primary'; }
-    if (startedEl){ startedEl.textContent = new Date().toLocaleString(); }
-
-    const bStart  = row.querySelector('[data-action-start]');
-    const bFinish = row.querySelector('[data-action-finish]');
-    const bCancel = row.querySelector('[data-action-cancel]');
-
-    if (bStart)  { bStart.setAttribute('disabled','disabled'); bStart.classList.add('d-none'); }
-    if (bFinish) { bFinish.removeAttribute('disabled'); }
-    if (bCancel) { bCancel.removeAttribute('disabled'); }
-
-    // Se não existe o botão "Concluir" (porque o Thymeleaf só renderiza quando status já é EM_ANDAMENTO), cria agora:
-    if (!bFinish) {
-      const actionsTd = row.querySelector('td.text-center') || row.querySelector('td:last-child');
-      const finishBtn = document.createElement('button');
-      finishBtn.className = 'btn btn-success btn-sm ms-1';
-      finishBtn.setAttribute('data-action-finish','');
-      finishBtn.setAttribute('data-bs-toggle','modal');
-      finishBtn.setAttribute('data-bs-target', `#finishModal-${id}`);
-      finishBtn.textContent = 'Concluir';
-      actionsTd?.appendChild(finishBtn);
-    }
-  }
-
-  // === CSRF ===
-  const CSRF_TOKEN  = document.querySelector('meta[name="_csrf"]')?.content || null;
-  const CSRF_HEADER = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
-
-  // === Helpers geométricos ===
-  function toRad(d){ return d * Math.PI/180; }
-  function haversine(a,b){
-    const R=6371000,dLat=toRad(b[0]-a[0]),dLng=toRad(b[1]-a[1]);
-    const la1=toRad(a[0]),la2=toRad(b[0]);
-    const s=Math.sin(dLat/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dLng/2)**2;
-    return 2*R*Math.asin(Math.sqrt(s));
-  }
-  function bearing(a,b){
-    const φ1=toRad(a[0]),φ2=toRad(b[0]),λ1=toRad(a[1]),λ2=toRad(b[1]);
-    const y=Math.sin(λ2-λ1)*Math.cos(φ2);
-    const x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(λ2-λ1);
-    return (Math.atan2(y,x)*180/Math.PI+360)%360;
-  }
-  function lerp(a,b,t){ return [ a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t ]; }
-
-  // === Rota OSRM → lista de [lat,lng] ===
-  async function fetchRouteCoords(startLat,startLng,endLat,endLng){
-    const url = `${OSRM_PROXY}?coordinates=${startLng},${startLat};${endLng},${endLat}&overview=full&geometries=geojson&steps=true`;
-    const res = await fetch(url);
-    if(!res.ok) throw new Error('Falha ao obter rota OSRM');
-    const data = await res.json();
-    if(!data.routes?.length) throw new Error('Rota vazia');
-    return data.routes[0].geometry.coordinates.map(([lng,lat])=>[lat,lng]);
-  }
-
-  // === Anima o caminhão ao longo da rota ===
-  function animateAlong(map, coords, speedMps){
-    // desenha rota visível
-    if (routeLayer) map.removeLayer(routeLayer);
-    routeLayer = L.polyline(coords, { weight: 5, opacity: 0.35 }).addTo(map);
-    map.fitBounds(routeLayer.getBounds(), { padding:[30,30] });
-
-    // cria marker como DIV com emoji interno
-    if (truckMarker) map.removeLayer(truckMarker);
-    const truckIcon = L.divIcon({
-      className: '',
-      html: '<div class="truck-emoji">🚛</div>',
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
-    });
-    truckMarker = L.marker(coords[0], { icon: truckIcon }).addTo(map);
-
-    // pré-cálculo de distâncias
-    const segLen=[], cum=[0];
-    for(let i=0;i<coords.length-1;i++){ const m=haversine(coords[i],coords[i+1]); segLen.push(m); cum.push(cum[i]+m); }
-    const total=cum[cum.length-1];
-    const startTime=performance.now();
-
-    function frame(now){
-      const elapsed=(now-startTime)/1000;
-      const dist=Math.min(speedMps*elapsed,total);
-      let i=0; while(i<segLen.length && cum[i+1]<dist) i++;
-      const segStart=cum[i], segEnd=cum[i+1];
-      const t=(segEnd>segStart)?(dist-segStart)/(segEnd-segStart):1;
-      const A=coords[i], B=coords[i+1];
-      const pos=lerp(A,B,t);
-
-      truckMarker.setLatLng(pos);
-
-      const emoji = truckMarker.getElement()?.querySelector('.truck-emoji');
-      if (emoji) emoji.style.transform = `rotate(${bearing(A,B)}deg)`;
-
-      if (dist<total) requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
-  }
-
-  // === Iniciar coleta (AJAX) + emulação no mapa ===
-  async function iniciar(id){
-    const btn = document.querySelector(`[data-action-start][data-id="${id}"]`);
-    if (btn) btn.setAttribute('disabled','disabled');
-
-    if (!confirm(`Iniciar coleta #${id}?`)) {
-      if (btn) btn.removeAttribute('disabled');
-      return;
-    }
-
-    const url = START_URL_TPL.replace('__ID__', id);
-    const headers = {};
-    if (CSRF_TOKEN) headers[CSRF_HEADER] = CSRF_TOKEN;
-    headers['X-Requested-With'] = 'fetch';
-
+  /* ===========================================================
+     🔥 BUSCA veículos reais da linha SPTrans
+  =========================================================== */
+  async function buscarCaminhoesOlhoVivo(codigoLinha) {
     try {
-      const resp = await fetch(url, { method:'POST', headers });
-
-      if (resp.ok || resp.status === 409) {
-        // 1) UI
-        updateRowUIToRunning(id);
-
-        // 2) velocidade (km/h → m/s)
-        const sLat = parseFloat(btn?.dataset.startLat);
-        const sLng = parseFloat(btn?.dataset.startLng);
-        const eLat = parseFloat(btn?.dataset.endLat);
-        const eLng = parseFloat(btn?.dataset.endLng);
-        let kmh = parseFloat(btn?.dataset.speed);
-        if (isNaN(kmh)) kmh = 50;
-        const mps = kmh / 3.6;
-
-        // 3) rota + animação
-        try {
-          const coords = await fetchRouteCoords(sLat, sLng, eLat, eLng);
-          if (coords.length >= 2) animateAlong(map, coords, mps);
-          else alert('Rota sem pontos suficientes para animar.');
-        } catch (e) {
-          console.error(e);
-          alert('Falha ao emular movimento.');
-        }
-        return;
-      }
-
-      if (resp.status === 400) {
-        let msg = 'Não foi possível iniciar: verifique o horário agendado e o estado da coleta.';
-        try { const t = await resp.text(); if (t) msg = t; } catch(_){}
-        alert(msg);
-      } else if (resp.status === 404) {
-        alert('Coleta não encontrada.');
-      } else {
-        alert('Falha ao iniciar (HTTP ' + resp.status + ')');
-      }
+      const res = await fetch(`/api/olhoVivo/veiculos/${codigoLinha}`);
+      const json = await res.json();
+      return json.vs || [];
     } catch (e) {
-      console.error('Erro ao iniciar:', e);
-      alert('Erro de rede ao iniciar a coleta.');
-    } finally {
-      // reabilita o botão só se a linha não ficou em andamento
-      const row = document.querySelector(`[data-row-id="${id}"]`);
-      const running = !!row?.querySelector('[data-col-status]')?.textContent?.includes('EM_ANDAMENTO');
-      if (!running && btn) btn.removeAttribute('disabled');
+      console.error("Erro ao buscar caminhões:", e);
+      return [];
     }
   }
+
+  /* ===========================================================
+     🔥 MONITORAMENTO EM TEMPO REAL (CORAÇÃO DO SISTEMA)
+  =========================================================== */
+  async function monitorarLinha(codigoLinha, clientLat, clientLng) {
+
+    // Remove marcadores antigos
+    truckMarkers.forEach(m => map.removeLayer(m));
+    truckMarkers = [];
+
+    const veiculos = await buscarCaminhoesOlhoVivo(codigoLinha);
+    if (!veiculos || veiculos.length === 0) return;
+
+    veiculos.forEach(v => {
+      const pos = [v.py, v.px];
+
+      // Distância cliente → caminhão
+      const distKm = calcularDistanciaKm(clientLat, clientLng, pos[0], pos[1]);
+      const metros = Math.round(distKm * 1000);
+
+      // Cor por proximidade
+      const cor =
+              distKm < 0.5 ? "#00ff9d" :
+                      distKm < 1.0 ? "#ffcc00" :
+                              "#ff4444";
+
+      const marker = L.circleMarker(pos, {
+        radius: 10,
+        weight: 3,
+        color: "#000",
+        fillColor: cor,
+        fillOpacity: 1
+      })
+              .addTo(map)
+              .bindPopup(`
+            <b>🚌 Caminhão Real</b><br>
+            Linha: ${codigoLinha}<br>
+            ID: ${v.vs || '?'}<br>
+            Vel.: ${v.sp || 0} km/h<br>
+            Distância: ${metros} m
+        `);
+
+      truckMarkers.push(marker);
+
+      // Alerta especial se o caminhão está chegando
+      if (distKm < 0.30) {
+        mostrarAvisoTopo("🚚 Seu caminhão está muito próximo!");
+      }
+    });
+
+    // Atualiza a cada 8s
+    clearTimeout(monitorTimer);
+    monitorTimer = setTimeout(() => monitorarLinha(codigoLinha, clientLat, clientLng), 8000);
+  }
+
+  /* ===========================================================
+     🔢 Função utilitária — distância haversine
+  =========================================================== */
+  function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2*Math.PI/180) *
+            Math.sin(dLon / 2) ** 2;
+
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  }
+
+  /* ===========================================================
+     🚀 INICIALIZAÇÃO DA PÁGINA
+  =========================================================== */
+  document.addEventListener("DOMContentLoaded", () => {
+
+    // Variáveis vinda do backend (Thymeleaf)
+    const linha = [[${job.route.codigoLinhaOlhoVivo}]];
+    const clientLat = [[${job.client.latitude}]];
+    const clientLng = [[${job.client.longitude}]];
+
+    const route = [[${job.route}]];
+
+    // Desenha o trajeto real salvo no banco
+    desenharShapeDaRota(route);
+
+    // Inicia o monitoramento realtime
+    monitorarLinha(linha, clientLat, clientLng);
+  });
+
 </script>
+
 
 </body>
 </html>

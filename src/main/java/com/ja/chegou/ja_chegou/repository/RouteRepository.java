@@ -11,13 +11,7 @@ import java.util.List;
 
 @Repository
 public interface RouteRepository extends JpaRepository<Route, Long> {
+
     List<Route> findByOriginId(Long centerId);
-    List<Route> findByTruckId(Truck truck);
-
-
-    @Query("SELECT r FROM Route r WHERE r.truck.id = :truckId")
-    List<Route> findByTruckId(@Param("truckId") Long truckId);
-
-
 
 }
