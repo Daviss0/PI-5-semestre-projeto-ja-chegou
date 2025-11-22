@@ -14,7 +14,7 @@ import java.util.Map;
 @Service
 public class OlhoVivoServiceImpl implements OlhoVivoService {
 
-    private static final String TOKEN = "";
+    private static final String TOKEN = "0de60b630f2f7fe859e53dff9412c450178648b002615f2733b63a3b90440c25";
     private static final String API_BASE = "https://api.olhovivo.sptrans.com.br/v2.1";
 
     @Autowired

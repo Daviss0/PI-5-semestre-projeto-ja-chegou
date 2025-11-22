@@ -6,11 +6,19 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { ActivityIndicator, View } from "react-native";
 
 function TabsLayout() {
-    const { user, loading } = useAuth();
+    const { client, loading } = useAuth();
 
+    // Enquanto estiver carregando o estado do usuário, não renderiza as tabs
     if (loading) {
         return (
-            <View style={{ flex: 1, backgroundColor: "#0E0E10", justifyContent: "center", alignItems: "center" }}>
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: "#0E0E10",
+                    justifyContent: "center",
+                    alignItems: "center",
+                }}
+            >
                 <ActivityIndicator size="large" color="#fff" />
             </View>
         );
@@ -29,7 +37,7 @@ function TabsLayout() {
                 headerShown: false,
             }}
         >
-            {/* 🔹 Mapa (sempre visível) */}
+            {/* Tela Principal (Mapa) */}
             <Tabs.Screen
                 name="MainPage"
                 options={{
@@ -40,7 +48,7 @@ function TabsLayout() {
                 }}
             />
 
-            {/* 🔹 Perfil (leva ao Login se deslogado) */}
+            {/* Perfil (só redireciona se REALMENTE não estiver logado) */}
             <Tabs.Screen
                 name="Profile"
                 options={{
@@ -51,7 +59,9 @@ function TabsLayout() {
                 }}
                 listeners={({ navigation }) => ({
                     tabPress: (e) => {
-                        if (!user) {
+                        // 🚀 AGORA FUNCIONA DO JEITO IDEAL:
+                        // Só redireciona se: loading terminou E client for null
+                        if (!loading && !client) {
                             e.preventDefault();
                             navigation.navigate("Login");
                         }
@@ -59,7 +69,7 @@ function TabsLayout() {
                 })}
             />
 
-            {/* Telas ocultas (fora da barra) */}
+            {/* Telas ocultas (não aparecem na TabBar) */}
             <Tabs.Screen name="Login" options={{ href: null, headerShown: false }} />
             <Tabs.Screen name="Register" options={{ href: null, headerShown: false }} />
             <Tabs.Screen name="RegisterDetails" options={{ href: null, headerShown: false }} />

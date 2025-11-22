@@ -893,19 +893,19 @@
                 .filter(r => r.distanceToUser <= filtroRaio)
                 .filter(r => filtroLinhas.includes(String(r.codigoLinhaOlhoVivo)))
                 .forEach((r, i) => {
-          let corDist =
-                  r.distanceToUser < 0.5 ? "#00ff9d" :
-                          r.distanceToUser < 1.0 ? "#ffcc00" :
-                                  "#ff6666";
+                  let corDist =
+                          r.distanceToUser < 0.5 ? "#00ff9d" :
+                                  r.distanceToUser < 1.0 ? "#ffcc00" :
+                                          "#ff6666";
 
-          html += `
+                  html += `
                     <div class="ms-2 mb-1">
                         ${i + 1}️⃣ <b>Linha SPTrans ${r.codigoLinhaOlhoVivo}</b><br>
                         <span style="color:${corDist};">
                             📍 ${(r.distanceToUser * 1000).toFixed(0)} metros
                         </span>
                     </div>`;
-        });
+                });
 
       } else {
         html = "<span style='color:#ccc;'>Nenhuma rota próxima encontrada</span>";

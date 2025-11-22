@@ -1,5 +1,5 @@
 // mobile-app/app/Profile.tsx
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
     View,
     Text,
@@ -9,38 +9,25 @@ import {
     Alert,
     SafeAreaView,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 
 export default function Profile() {
     const router = useRouter();
-    const [client, setClient] = useState<any>(null);
-
-    useEffect(() => {
-        (async () => {
-            try {
-                const storedClient = await AsyncStorage.getItem("clientData");
-                if (storedClient) {
-                    setClient(JSON.parse(storedClient));
-                } else {
-                    Alert.alert("Sessão expirada", "Por favor, faça login novamente.");
-                    router.replace("/Login");
-                }
-            } catch (err) {
-                console.error("Erro ao carregar dados:", err);
-            }
-        })();
-    }, []);
+    const { client, logout } = useAuth();
 
     const handleLogout = async () => {
-        await AsyncStorage.removeItem("clientData");
+        await logout();
         router.replace("/Login");
     };
 
     const handleNavigate = (screen: string) => {
-        if (screen === "Meus dados") router.push("/ProfileData");
-        else Alert.alert("Em desenvolvimento", `Tela ${screen} será adicionada futuramente.`);
+        if (screen === "Meus dados") {
+            router.push("/ProfileData");
+        } else {
+            Alert.alert("Em desenvolvimento", `Tela ${screen} será adicionada futuramente.`);
+        }
     };
 
     if (!client) {
@@ -53,12 +40,8 @@ export default function Profile() {
 
     return (
         <SafeAreaView style={styles.wrapper}>
-            <ScrollView
-                style={styles.container}
-                contentContainerStyle={{ paddingBottom: 100 }}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* 🔹 Cabeçalho */}
+            <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+                {/* Cabeçalho */}
                 <View style={styles.header}>
                     <View style={styles.avatarCircle}>
                         <Text style={styles.avatarText}>
@@ -71,27 +54,15 @@ export default function Profile() {
                     </View>
                 </View>
 
-                {/* 🔸 Menu */}
+                {/* Menu */}
                 <View style={styles.menuSection}>
-                    <MenuItem
-                        icon="person-outline"
-                        label="Meus dados"
-                        onPress={() => handleNavigate("Meus dados")}
-                    />
-                    <MenuItem
-                        icon="map-outline"
-                        label="Minhas rotas"
-                        onPress={() => handleNavigate("Minhas rotas")}
-                    />
-                    <MenuItem
-                        icon="notifications-outline"
-                        label="Notificações"
-                        onPress={() => handleNavigate("Notificações")}
-                    />
+                    <MenuItem icon="person-outline" label="Meus dados" onPress={() => handleNavigate("Meus dados")} />
+                    <MenuItem icon="map-outline" label="Minhas rotas" onPress={() => handleNavigate("Minhas rotas")} />
+                    <MenuItem icon="notifications-outline" label="Notificações" onPress={() => handleNavigate("Notificações")} />
                 </View>
             </ScrollView>
 
-            {/* 🔻 Botão fixo inferior */}
+            {/* Botão de logout */}
             <View style={styles.logoutContainer}>
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <Text style={styles.logoutText}>Sair da conta</Text>
@@ -101,15 +72,7 @@ export default function Profile() {
     );
 }
 
-const MenuItem = ({
-                      icon,
-                      label,
-                      onPress,
-                  }: {
-    icon: keyof typeof Ionicons.glyphMap;
-    label: string;
-    onPress: () => void;
-}) => (
+const MenuItem = ({ icon, label, onPress }: any) => (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
         <View style={styles.menuLeft}>
             <Ionicons name={icon} size={22} color="#fff" />
@@ -120,28 +83,11 @@ const MenuItem = ({
 );
 
 const styles = StyleSheet.create({
-    wrapper: {
-        flex: 1,
-        backgroundColor: "#0E0E10",
-    },
-    container: {
-        flex: 1,
-        paddingHorizontal: 20,
-        paddingTop: 50,
-    },
-    loadingContainer: {
-        flex: 1,
-        backgroundColor: "#0E0E10",
-        justifyContent: "center",
-        alignItems: "center",
-    },
+    wrapper: { flex: 1, backgroundColor: "#0E0E10" },
+    container: { flex: 1, paddingHorizontal: 20, paddingTop: 50 },
+    loadingContainer: { flex: 1, backgroundColor: "#0E0E10", justifyContent: "center", alignItems: "center" },
     loadingText: { color: "#888", fontSize: 16 },
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 30,
-        gap: 16,
-    },
+    header: { flexDirection: "row", alignItems: "center", marginBottom: 30, gap: 16 },
     avatarCircle: {
         width: 70,
         height: 70,
@@ -150,21 +96,9 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-    avatarText: {
-        fontSize: 28,
-        color: "#FFF",
-        fontWeight: "bold",
-    },
-    name: {
-        color: "#FFF",
-        fontSize: 22,
-        fontWeight: "bold",
-    },
-    email: {
-        color: "#888",
-        fontSize: 14,
-        marginTop: 4,
-    },
+    avatarText: { fontSize: 28, color: "#FFF", fontWeight: "bold" },
+    name: { color: "#FFF", fontSize: 22, fontWeight: "bold" },
+    email: { color: "#888", fontSize: 14, marginTop: 4 },
     menuSection: {
         backgroundColor: "#1A1A1D",
         borderRadius: 14,
@@ -195,9 +129,5 @@ const styles = StyleSheet.create({
         alignItems: "center",
         width: "90%",
     },
-    logoutText: {
-        color: "#000",
-        fontWeight: "bold",
-        fontSize: 16,
-    },
+    logoutText: { color: "#000", fontWeight: "bold", fontSize: 16 },
 });
