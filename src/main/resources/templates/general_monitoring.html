@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitoramento Geral</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <style>
+        body, html { height: 100%; margin: 0; }
+        #map { height: 100vh; width: 100%; }
+        #painel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            width: 260px;
+            color: #fff;
+            z-index: 1000;
+        }
+        #painel label { font-weight: bold; }
+    </style>
+
+</head>
+<body>
+
+<div id="painel">
+    <h5>🔍 Filtros</h5>
+
+    <label>Linhas cadastradas:</label>
+    <div style="max-height: 200px; overflow-y: auto;">
+        <div th:each="r : ${routes}">
+            <input type="checkbox" class="linhaFiltro"
+                   th:value="${r.codigoLinhaOlhoVivo}" checked>
+            <span th:text="${r.codigoLinhaOlhoVivo}"></span>
+        </div>
+    </div>
+
+    <button class="btn btn-warning btn-sm mt-2 w-100"
+            onclick="atualizarMapa()">Atualizar Agora</button>
+</div>
+
+<div id="map"></div>
+
+<script th:inline="javascript">
+
+    let rotas = /*[[${routes}]]*/ [];
+    let map = L.map('map').setView([-23.55, -46.63], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: "© OpenStreetMap"
+    }).addTo(map);
+
+    let shapes = [];
+    let veiculosMarkers = [];
+
+    /** Desenha todos os shapes das linhas SPTrans cadastradas */
+    function desenharShapes() {
+        shapes.forEach(s => map.removeLayer(s));
+        shapes = [];
+
+        rotas.forEach(r => {
+            if (!r.coordinates || r.coordinates.length === 0) return;
+
+            const pontos = r.coordinates.map(c => [c.lat, c.lng]);
+
+            const cor = "#" + Math.floor(Math.random()*16777215).toString(16);
+
+            const linha = L.polyline(pontos, {
+                color: cor,
+                weight: 5,
+                opacity: 0.8
+            }).addTo(map);
+
+            linha.codigoLinha = r.codigoLinhaOlhoVivo;
+            shapes.push(linha);
+        });
+    }
+
+    /** Busca ônibus reais da SPTrans */
+    async function buscarCaminhoes(codigoLinha) {
+        try {
+            const res = await fetch(`/api/olhoVivo/veiculos/${codigoLinha}`);
+            const json = await res.json();
+            return json.vs || [];
+        } catch (e) {
+            console.error("Erro ao buscar veículos:", e);
+            return [];
+        }
+    }
+
+    /** Atualiza TODOS os veículos no mapa */
+    async function atualizarMapa() {
+
+        // Remover marcadores antigos
+        veiculosMarkers.forEach(m => map.removeLayer(m));
+        veiculosMarkers = [];
+
+        const linhasSelecionadas = [...document.querySelectorAll(".linhaFiltro:checked")]
+            .map(cb => cb.value);
+
+        for (const r of rotas) {
+            if (!linhasSelecionadas.includes(r.codigoLinhaOlhoVivo.toString())) continue;
+
+            const veiculos = await buscarCaminhoes(r.codigoLinhaOlhoVivo);
+
+            veiculos.forEach(v => {
+                const pos = [v.py, v.px];
+
+                const marker = L.circleMarker(pos, {
+                    radius: 10,
+                    weight: 2,
+                    color: "#000",
+                    fillColor: "#ffcc00",
+                    fillOpacity: 1
+                })
+                    .addTo(map)
+                    .bindPopup(`
+                    <b>🚌 Caminhão</b><br>
+                    Linha: ${r.codigoLinhaOlhoVivo}<br>
+                    ID: ${v.vs}<br>
+                    Vel.: ${v.sp || 0} km/h
+                `);
+
+                veiculosMarkers.push(marker);
+            });
+        }
+
+        // Atualizar automaticamente a cada 8s
+        setTimeout(atualizarMapa, 8000);
+    }
+
+    // Inicialização
+    desenharShapes();
+    atualizarMapa();
+
+</script>
+
+</body>
+</html>

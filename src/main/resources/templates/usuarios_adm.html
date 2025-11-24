@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciamento de usuários - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">Já Chegou</a>
+        <div class="collapse navbar-collapse justify-content-end">
+            <a class="btn btn-outline-light" th:href="@{/logout}">Sair</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-5">
+    <div class="card shadow-lg p-4">
+        <h2 class="text-primary mb-4">Gerenciamento de Administradores</h2>
+
+        <div class="mb-3">
+            <a class="btn btn-success" th:href="@{/admin/usuarios/new}">+ Novo Administrador</a>
+            <a th:href="@{/admin/menu_users}" class="btn btn-secondary">Voltar</a>
+
+        </div>
+
+        <table class="table table-striped table-hover">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>CPF</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="admin : ${admins}">
+                <td th:text="${admin.id}"></td>
+                <td th:text="${admin.name}"></td>
+                <td th:text="${admin.email}"></td>
+                <td th:text="${admin.cpf}"></td>
+                <td th:text="${admin.status}"></td>
+                <td>
+                    <div class="btn-group" role="group">
+                    <a th:href="@{/admin/editar/{id}(id=${admin.id})}" class="btn btn-warning btn-sm">Editar</a>
+                    <a th:href="@{'/admin/usuarios/' + ${admin.id} + '/toggle-status'}"
+                       class="btn"
+                       th:classappend="${admin.status.name() == 'ATIVO'} ? 'btn-danger btn-sm' : 'btn-success btn-sm'">
+                        <span th:text="${admin.status.name() == 'ATIVO'} ? 'Desativar' : 'Ativar'"></span>
+                    </a>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>

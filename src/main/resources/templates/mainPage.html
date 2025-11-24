@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <title>Já Chegou</title>
+
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0b0c10"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu;
+      background-color: #0b0c10;
+      color: #f1f1f1;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      background-color: #1a1b1f;
+      color: #fff;
+      font-weight: 700;
+      text-align: center;
+      padding: 12px;
+      z-index: 10;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #2e2f33;
+    }
+
+    .bottomnav {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background-color: #1a1b1f;
+      border-top: 1px solid #2e2f33;
+      padding: 8px 0;
+      color: #aaa;
+      font-size: 0.9rem;
+    }
+
+    .bottomnav button {
+      background: none;
+      border: none;
+      color: #aaa;
+      text-align: center;
+      flex: 1;
+      padding: 6px 0;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .bottomnav button.active,
+    .bottomnav button:hover {
+      color: #fff;
+    }
+
+    .bottomnav .icon {
+      display: block;
+      font-size: 1.3rem;
+      margin-bottom: 3px;
+    }
+
+    .legend {
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      position: absolute;
+      bottom: 120px;
+      left: 15px;
+      z-index: 1100;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      width: 200px;
+    }
+
+
+    .legend div { margin: 4px 0; }
+
+    .modal-content {
+      background-color: #1f2024;
+      color: #fff;
+    }
+
+    .list-group-item.bg-warning {
+      border-radius: 8px;
+      font-weight: 600;
+      transition: transform 0.15s ease;
+    }
+    .list-group-item.bg-warning:hover {
+      transform: scale(1.03);
+    }
+
+  </style>
+</head>
+
+<body>
+<header class="topbar">Já Chegou</header>
+
+<main style="position:relative;flex:1;">
+
+  <div id="filtrosRotas"
+       style="position:absolute; top:80px; left:15px;
+            background:rgba(0,0,0,0.8);
+            padding:12px; border-radius:10px;
+            color:#fff; font-size:0.85rem;
+            z-index:1200; width:220px;">
+
+    <b>🔍 Filtros</b><br>
+
+    <label class="mt-2">Raio:</label>
+    <select id="filtroRaio" class="form-select form-select-sm bg-dark text-white">
+      <option value="0.3">300m</option>
+      <option value="0.5" selected>500m</option>
+      <option value="1.0">1km</option>
+      <option value="2.0">2km</option>
+      <option value="5.0">5km</option>
+    </select>
+
+    <label class="mt-2">Linhas:</label>
+    <div id="filtroLinhasContainer"
+         style="max-height:120px; overflow-y:auto; padding:5px;
+                border:1px solid #444; border-radius:6px;">
+      <!-- preenchido automaticamente pelo JS -->
+    </div>
+
+    <label class="mt-2">Exibição:</label>
+    <select id="filtroExibicao" class="form-select form-select-sm bg-dark text-white">
+      <option value="proximas" selected>Somente próximas</option>
+      <option value="todas">Todas as rotas</option>
+    </select>
+
+  </div>
+
+
+
+  <div id="map"></div>
+
+  <div id="listaRotasProximas"
+       style="position:absolute;
+            bottom:90px;
+            left:15px;
+            background:rgba(0,0,0,0.8);
+            color:#fff;
+            padding:10px 14px;
+            border-radius:10px;
+            font-size:0.9rem;
+            box-shadow:0 4px 8px rgba(0,0,0,0.4);
+            max-width:280px;
+            z-index:1000;
+            display:none;">
+  </div>
+
+
+  <div class="legend">
+    🔵 Caminhão (tempo real)
+    <hr style="margin: 6px 0; opacity: 0.4;">
+    <div><b>🟢 Muito próximo</b> (< 500m)</div>
+    <div><b>🟡 Próximo</b> (500m – 1km)</div>
+    <div><b>🔴 Distante</b> (> 1km)</div>
+  </div>
+
+
+</main>
+
+<nav class="bottomnav" style="position: relative;">
+  <button id="btnShowRoutes">
+    <span class="icon">🚛</span>Rotas
+  </button>
+  <button id="navLogin" onclick="location.href='/client/login'">
+    <span class="icon">🔐</span>Entrar
+  </button>
+  <button id="navRegister" onclick="location.href='/register'">
+    <span class="icon">📝</span>Cadastrar
+  </button>
+
+  <!-- 🟡 Novo botão de notificações -->
+  <button id="btnNotificacoes" type="button">
+    <span class="icon">🔔</span>Notificações
+  </button>
+
+  <button id="navAccount" onclick="openAccount()">
+    <span class="icon">👤</span>Conta
+  </button>
+  <button id="navLogout" onclick="logout()">
+    <span class="icon">🚪</span>Sair
+  </button>
+
+  <!-- ⚙️ Painel de configuração (começa oculto) -->
+  <div id="configNotificacao"
+       style="display:none; position:absolute; right:10px; bottom:55px; background:#1f1f1f; border:1px solid #333; border-radius:10px; padding:10px 12px; color:#fff; font-size:0.9rem; z-index:2000; box-shadow:0 4px 8px rgba(0,0,0,0.3); width:170px;">
+    <strong>🔔 Notificações</strong><br>
+    <label>Distância (km):</label><br>
+    <input type="number" id="distanciaAlerta" min="0.1" max="10" step="0.1" value="1"
+           style="width:60px; background:#2b2b2b; color:#fff; border:1px solid #555; border-radius:5px; padding:2px 4px; margin-bottom:4px;">
+    <br>
+    <label>Intervalo (min):</label><br>
+    <input type="number" id="tempoRearme" min="1" max="60" step="1" value="1"
+           style="width:60px; background:#2b2b2b; color:#fff; border:1px solid #555; border-radius:5px; padding:2px 4px;">
+  </div>
+</nav>
+
+
+
+<div class="modal fade" id="rotasModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title">Rotas disponíveis</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="routeList" class="list-group"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script th:inline="javascript">
+
+
+  let map = null;
+
+  window.clientLat  = /*[[${clientLat} != null ? ${clientLat} : 'null' ]]*/ null;
+  window.clientLng  = /*[[${clientLng} != null ? ${clientLng} : 'null' ]]*/ null;
+  window.clientName = /*[[${clientName} != null ? '${clientName}' : 'null' ]]*/ null;
+
+  /* ==========================================================
+     🔥 PARTE 1 — CONFIGURAÇÕES E ESTADO GLOBAL
+  ========================================================== */
+
+  if (performance.getEntriesByType("navigation")[0].type === "back_forward") {
+    window.location.reload(true);
+  }
+
+  const API_BASE = location.origin;
+  const loggedServer = /*[[${logged}]]*/ false;
+  const loggedClient = localStorage.getItem("clientLogged") === "true";
+  const clientEmail = localStorage.getItem("clientEmail") || null;
+  const logged = loggedClient || loggedServer;
+  const markersCaminhoes = {}; // { "809A": {prefixo: marker} }
+
+
+  // 🔹 Variáveis globais do cliente
+  window.clientLat = null;
+  window.clientLng = null;
+  window.clientName = null;
+
+  // 🔹 Preferências do usuário
+  let distanciaAlerta = 1.0;  // km
+  let tempoRearme = 60000;    // 1 minuto
+  let ultimoAlertaLinha = {}; // armazena timestamp do último alerta por linha
+
+  document.addEventListener("DOMContentLoaded", () => {
+
+    /* ==========================================================
+       🔧 PARTE 2 — CONTROLES DA NAVBAR E PAINEL DE NOTIFICAÇÃO
+    ========================================================== */
+
+    const btnShow = document.getElementById("btnShowRoutes");
+    const navLogin = document.getElementById("navLogin");
+    const navRegister = document.getElementById("navRegister");
+    const navAccount = document.getElementById("navAccount");
+    const navLogout = document.getElementById("navLogout");
+
+    if (logged) {
+      [navLogin, navRegister].forEach(b => b && (b.style.display = "none"));
+      [navAccount, navLogout].forEach(b => b && (b.style.display = "inline-block"));
+    } else {
+      [navLogin, navRegister].forEach(b => b && (b.style.display = "inline-block"));
+      [navAccount, navLogout].forEach(b => b && (b.style.display = "none"));
+    }
+
+    if (btnShow) {
+      btnShow.addEventListener("click", () => {
+        if (!logged) {
+          mostrarAvisoTopo("⚠️ Você precisa estar logado para ver as rotas.");
+        } else {
+          showRoutes();
+        }
+      });
+    }
+
+    // 🔔 Permissão de notificação
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
+
+    // 🔧 Painel notificações
+    const painel = document.getElementById("configNotificacao");
+    const btnNotif = document.getElementById("btnNotificacoes");
+
+    if (btnNotif && painel) {
+      btnNotif.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!logged) {
+          mostrarAvisoTopo("⚠️ Você precisa estar logado para configurar as notificações.");
+          return;
+        }
+        painel.style.display = painel.style.display === "none" ? "block" : "none";
+      });
+
+      document.addEventListener("click", (e) => {
+        if (painel.style.display === "block" && !painel.contains(e.target) && e.target !== btnNotif) {
+          painel.style.display = "none";
+        }
+      });
+    }
+
+    // Inputs de configuração
+    const distanciaInput = document.getElementById("distanciaAlerta");
+    const tempoInput = document.getElementById("tempoRearme");
+
+    if (distanciaInput) {
+      distanciaInput.addEventListener("input", () => {
+        distanciaAlerta = parseFloat(distanciaInput.value);
+      });
+    }
+
+    if (tempoInput) {
+      tempoInput.addEventListener("input", () => {
+        tempoRearme = parseInt(tempoInput.value) * 60000;
+      });
+    }
+
+    carregarCliente();
+    carregarLinhasParaFiltro();
+
+  });
+
+  /* ==========================================================
+     🔊 PARTE 3 — NOTIFICAÇÕES (som + overlay)
+  ========================================================== */
+
+  function tocarSomNotificacao() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.35);
+    } catch {}
+  }
+
+  function mostrarAvisoTopo(msg) {
+    const old = document.querySelector(".aviso-overlay");
+    if (old) old.remove();
+
+    tocarSomNotificacao();
+
+    const overlay = document.createElement("div");
+    overlay.className = "aviso-overlay";
+    Object.assign(overlay.style, {
+      position: "fixed",
+      top: 0, left: 0, width: "100%", height: "100%",
+      background: "rgba(0,0,0,0.6)", display: "flex",
+      justifyContent: "center", alignItems: "center",
+      zIndex: 5000, opacity: 0, transition: "0.3s"
+    });
+    document.body.appendChild(overlay);
+
+    const caixa = document.createElement("div");
+    caixa.innerHTML = `
+      <div style="font-size:50px; animation:pulse 1s infinite alternate;">🚚</div>
+      <div style="font-size:22px; margin-top:10px; font-weight:bold;">${msg}</div>`;
+    Object.assign(caixa.style, {
+      background: "linear-gradient(160deg,#ff9100,#ff5722)",
+      color: "#fff", padding: "25px 40px",
+      borderRadius: "18px", textAlign: "center",
+      transform: "scale(0.8)", opacity: 0, transition: "0.3s"
+    });
+    overlay.appendChild(caixa);
+
+    setTimeout(() => {
+      overlay.style.opacity = 1;
+      caixa.style.opacity = 1;
+      caixa.style.transform = "scale(1)";
+    }, 50);
+
+    setTimeout(() => fechar(), 5000);
+    overlay.addEventListener("click", fechar);
+
+    function fechar() {
+      overlay.style.opacity = 0;
+      caixa.style.opacity = 0;
+      caixa.style.transform = "scale(0.9)";
+      setTimeout(() => overlay.remove(), 300);
+    }
+
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes pulse { from {transform:scale(1);} to {transform:scale(1.2);} }
+  `;
+    document.head.appendChild(style);
+  }
+
+  function mostrarAvisoTopoLeve(msg) {
+    let aviso = document.getElementById("avisoTopoLeve");
+
+    if (!aviso) {
+      aviso = document.createElement("div");
+      aviso.id = "avisoTopoLeve";
+      Object.assign(aviso.style, {
+        position: "fixed",
+        top: "10px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        background: "rgba(255,193,7,0.95)", // amarelo warning
+        color: "#000",
+        padding: "10px 20px",
+        borderRadius: "8px",
+        boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
+        zIndex: "6000",
+        fontSize: "16px",
+        fontWeight: "bold",
+        opacity: "0",
+        transition: "opacity 0.3s"
+      });
+      document.body.appendChild(aviso);
+    }
+
+    aviso.innerText = msg;
+    aviso.style.opacity = 1;
+
+    setTimeout(() => {
+      aviso.style.opacity = 0;
+    }, 4500);
+  }
+
+
+
+  let routeLayer = null;
+
+  /* ==========================================================
+     🔥 PARTE 5 — FUNÇÃO OLHO VIVO
+  ========================================================== */
+
+  // 🔹 Armazena marcadores por linha
+  let liveTruckMarkers = {};
+  // Estrutura final:
+  // liveTruckMarkers[codigoLinha] = [ {marker, idVeiculo} , ... ]
+
+
+  async function buscarCaminhoesOlhoVivo(linha) {
+    try {
+      const r = await fetch(`/api/olhoVivo/veiculos/${linha}`);
+      const json = await r.json();
+
+      // API SPTrans com erro
+      if (json && json.erro) {
+        mostrarAvisoTopoLeve("⚠️ API SPTrans retornou erro.");
+        return [];
+      }
+
+      // SPTrans retorna veículos como json.vs
+      if (!json || !json.vs) {
+        return [];
+      }
+
+      // Converte formato
+      return json.vs.map(v => ({
+        lat: v.py,
+        lng: v.px,
+        prefixo: v.p,
+        atualizado: v.ta
+      }));
+
+    } catch (e) {
+      console.error("Erro ao buscar Olho Vivo:", e);
+      return [];
+    }
+  }
+
+
+  function atualizarMarcadorCaminhao(linha, veiculo) {
+
+    // Criar estrutura por linha, caso não exista
+    if (!liveTruckMarkers[linha]) {
+      liveTruckMarkers[linha] = {};
+    }
+
+    // Identificador único do veículo (prefixo SPTrans)
+    const id = veiculo.prefixo;
+
+    // Ícone baseado na linha
+    const color = "#" + ((1 << 24) * Math.sin(parseInt(linha))).toString(16).slice(0, 6);
+
+    const busIcon = L.divIcon({
+      className: "bus-marker",
+      html: `
+          <div style="
+              width:18px;
+              height:18px;
+              background:${color};
+              border:2px solid white;
+              border-radius:50%;
+              box-shadow:0 0 4px #000;
+          "></div>
+        `,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+
+    // Se o marcador já existe → mover
+    if (liveTruckMarkers[linha][id]) {
+      liveTruckMarkers[linha][id].setLatLng([veiculo.lat, veiculo.lng]);
+      return;
+    }
+
+    // Criar novo
+    const marker = L.marker([veiculo.lat, veiculo.lng], { icon: busIcon })
+            .addTo(map)
+            .bindPopup(`
+            <div style="min-width:160px;">
+                <b style="font-size:16px;">🚌 Caminhão Real</b><br>
+                <b>Linha:</b> ${linha}<br>
+                <b>Veículo:</b> ${id}<br>
+                <b>Atualização:</b> agora
+            </div>
+        `);
+
+    // Armazenar por prefixo
+    liveTruckMarkers[linha][id] = marker;
+  }
+
+  async function carregarRotas() {
+    try {
+      const res = await fetch("/api/routes/public");
+      const rotas = await res.json();
+
+      if (!Array.isArray(rotas)) {
+        console.error("Resposta inválida do servidor:", rotas);
+        return [];
+      }
+
+      // Atualiza o cache global das rotas
+      window.rotasCarregadas = rotas;
+
+      return rotas;
+    } catch (e) {
+      console.error("Erro ao carregar rotas:", e);
+      mostrarAvisoTopoLeve("❌ Erro ao carregar rotas.");
+      return [];
+    }
+  }
+
+  async function atualizarCaminhoes() {
+    const rotas = await carregarRotas();   // você já tem essa função no mainPage
+
+    for (let rota of rotas) {
+
+      const codigoLinha = rota.codigoLinhaOlhoVivo;
+
+      const veiculos = await buscarCaminhoesOlhoVivo(codigoLinha);
+
+      veiculos.forEach(v =>
+              atualizarMarcadorCaminhao(codigoLinha, v)
+      );
+    }
+  }
+
+
+  // 🔹 Função de distância
+  function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI/180;
+    const dLon = (lon2 - lon1) * Math.PI/180;
+    const a = Math.sin(dLat/2)**2 +
+            Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+            Math.sin(dLon/2)**2;
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  // 🔹 Verifica proximidade (com timers por linha)
+  function verificarAproximacao(linha, lat, lon) {
+    const dist = calcularDistanciaKm(clientLat, clientLng, lat, lon);
+
+    if (dist < distanciaAlerta) {
+
+      const agora = Date.now();
+      if (!ultimoAlertaLinha[linha] || agora - ultimoAlertaLinha[linha] > tempoRearme) {
+        ultimoAlertaLinha[linha] = agora;
+        mostrarAvisoTopo(`🚚 Caminhão da linha ${linha} está próximo da sua casa!`);
+      }
+    }
+  }
+
+  /* ==========================================================
+     🔥 PARTE 6 — CARREGAR CLIENTE + ROTAS MAIS PRÓXIMAS
+  ========================================================== */
+
+  async function carregarCliente() {
+    if (!loggedClient || !clientEmail) return;
+
+    try {
+      const r = await fetch(`/api/clients/by-email?email=${encodeURIComponent(clientEmail)}&force=${Date.now()}`);
+      const client = await r.json();
+
+      // Garantir que o backend retornou latitude/longitude válidas
+      if (client.latitude != null && client.longitude != null) {
+
+        // Converter para número (caso venham como string do backend)
+        clientLat = Number(client.latitude);
+        clientLng = Number(client.longitude);
+        clientName = client.name;
+
+        // Criar marcador do cliente no mapa
+        const clientIcon = L.icon({
+          iconUrl: "https://cdn-icons-png.flaticon.com/512/2776/2776067.png",
+          iconSize: [38, 38],
+          iconAnchor: [19, 38]
+        });
+
+        L.marker([clientLat, clientLng], { icon: clientIcon })
+                .addTo(map)
+                .bindPopup(`<b>${clientName}</b>`);
+
+        // Centralizar o mapa no endereço do cliente
+        map.setView([clientLat, clientLng], 15);
+
+
+      } else {
+        console.warn("⚠ Cliente não possui latitude/longitude no backend.");
+      }
+
+    } catch (err) {
+      console.error("Erro ao carregar cliente:", err);
+    }
+  }
+
+  async function carregarRotasIniciais() {
+    try {
+      const res = await fetch(`/api/routes/closest?lat=${clientLat}&lon=${clientLng}`);
+      const rotas = await res.json();
+
+      rotas.forEach((r, i) => {
+        if (r.coordinates) {
+          const colors = ["#00ff9d", "#ffa500", "#0099ff"];
+          L.polyline(r.coordinates, { color: colors[i], weight: 4 }).addTo(map);
+        }
+      });
+
+    } catch (e) {
+      console.error("Erro ao buscar rotas:", e);
+    }
+  }
+
+  /* ==========================================================
+    🎚️ PARTE — FILTROS
+ ========================================================== */
+
+  let filtroRaio = 0.5;        // km
+  let filtroLinhas = [];       // lista de linhas selecionadas
+  let filtroExibicao = "proximas";  // proximas | todas
+
+  function iniciarMapa() {
+    map = L.map('map', {
+      zoomControl: true,
+      attributionControl: false
+    });
+
+    // tema escuro igual sua aplicação
+    L.tileLayer(
+            "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+            {
+              maxZoom: 19,
+              subdomains: "abcd",
+            }
+    ).addTo(map);
+
+    // posição inicial "placeholder" antes do cliente carregar
+    map.setView([-23.55, -46.63], 13);
+  }
+
+
+  document.addEventListener("DOMContentLoaded", async () => {
+
+    iniciarMapa();
+
+    await carregarCliente();
+    await carregarLinhasParaFiltro();
+
+    atualizarCaminhoes();
+    setInterval(atualizarCaminhoes, 10000);
+
+    const selectRaio = document.getElementById("filtroRaio");
+    selectRaio.addEventListener("change", () => {
+      filtroRaio = parseFloat(selectRaio.value);
+      showRoutes();
+    });
+
+    const selectExibicao = document.getElementById("filtroExibicao");
+    selectExibicao.addEventListener("change", () => {
+      filtroExibicao = selectExibicao.value;
+      showRoutes();
+    });
+
+  });
+
+
+  /** Preenche lista de linhas dinamicamente */
+  async function carregarLinhasParaFiltro() {
+    const res = await fetch("/api/routes/public");
+    const rotas = await res.json();
+
+    const box = document.getElementById("filtroLinhasContainer");
+    box.innerHTML = "";
+
+    rotas.forEach(r => {
+      const id = "linha_" + r.codigoLinhaOlhoVivo;
+
+      box.innerHTML += `
+            <div>
+                <input type="checkbox" class="filtroLinha" id="${id}" value="${r.codigoLinhaOlhoVivo}" checked>
+                <label for="${id}">Linha ${r.codigoLinhaOlhoVivo}</label>
+            </div>
+        `;
+    });
+
+    // evento
+    document.querySelectorAll(".filtroLinha").forEach(cb => {
+      cb.addEventListener("change", () => {
+        filtroLinhas = [...document.querySelectorAll(".filtroLinha:checked")]
+                .map(x => x.value);
+
+        showRoutes();
+      });
+    });
+
+    // marcar todas inicialmente
+    filtroLinhas = rotas.map(r => r.codigoLinhaOlhoVivo);
+  }
+
+
+  async function showRoutes() {
+    if (clientLat == null || clientLng == null){
+      mostrarAvisoTopo("⚠️ Localização do cliente não disponível.");
+      return;
+    }
+
+    try {
+      // Buscar rotas próximas
+      const resClosest = await fetch(`/api/routes/closest?lat=${clientLat}&lon=${clientLng}`);
+      const closestRoutes = await resClosest.json();
+
+      // Buscar todas as rotas públicas
+      const resAll = await fetch(API_BASE + "/api/routes/public");
+      const allRoutes = await resAll.json();
+
+
+
+      /* ==========================================================
+         🔥 BUSCAR CAMINHÕES REAIS PARA CADA ROTA PRÓXIMA
+      ========================================================== */
+      for (const r of allRoutes) {
+        if (r.codigoLinhaOlhoVivo) {
+
+          const veiculos = await buscarCaminhoesOlhoVivo(r.codigoLinhaOlhoVivo);
+
+          veiculos.forEach(v => {
+            atualizarMarcadorCaminhao(r.codigoLinhaOlhoVivo, v);
+            verificarAproximacao(r.codigoLinhaOlhoVivo, v.lat, v.lng);
+          });
+        }
+      }
+
+      /* ==========================================================
+         🔥 MONTAR LISTA NO MODAL
+      ========================================================== */
+      const list = document.getElementById("routeList");
+      list.innerHTML = "";
+
+      const rotasValidas =
+              filtroExibicao === "proximas"
+                      ? closestRoutes
+                              .filter(r => r.distanceToUser <= filtroRaio)
+                              .filter(r => filtroLinhas.includes(String(r.codigoLinhaOlhoVivo)))
+                      : allRoutes.filter(r => filtroLinhas.includes(String(r.codigoLinhaOlhoVivo)));
+
+
+      // Nenhuma rota próxima
+      if (rotasValidas.length === 0) {
+        const msg = document.createElement("div");
+        msg.className = "text-danger fw-bold text-center mb-3";
+        msg.innerText = "Não existem rotas próximas ao endereço cadastrado.";
+        list.appendChild(msg);
+      } else {
+
+        // Cabeçalho
+        const header = document.createElement("div");
+        header.className = "text-warning fw-bold text-center mb-2";
+        header.innerText = "🔥 Rotas mais próximas de você:";
+        list.appendChild(header);
+
+        // Rotas próximas
+        rotasValidas.forEach(r => {
+
+          let corDist =
+                  r.distanceToUser < 0.5 ? "#00ff9d" :
+                          r.distanceToUser < 1.0 ? "#ffcc00" :
+                                  "#ff6666";
+
+          const item = document.createElement("button");
+          item.className = "list-group-item list-group-item-action bg-warning text-dark border-0 mb-1";
+
+          item.innerHTML = `
+                    <b>Linha SPTrans ${r.codigoLinhaOlhoVivo}</b>
+                    <small class="d-block" style="color:#000;">
+                        <span style="color:${corDist};">📍</span>
+                        A rota passa a cerca de ${(r.distanceToUser * 1000).toFixed(0)} metros
+                    </small>
+                `;
+
+          item.addEventListener("click", () => drawRoute(allRoutes.find(rt => rt.id === r.id)));
+          list.appendChild(item);
+        });
+
+        list.appendChild(document.createElement("hr"));
+      }
+
+      // Lista de todas as rotas
+      const headerAll = document.createElement("div");
+      headerAll.className = "text-info fw-bold text-center mb-2";
+      headerAll.innerText = "🌍 Todas as rotas disponíveis:";
+      list.appendChild(headerAll);
+
+      allRoutes.forEach(r => {
+        const item = document.createElement("button");
+        item.className = "list-group-item list-group-item-action bg-dark text-white";
+        item.innerHTML = `<span>Linha SPTrans ${r.codigoLinhaOlhoVivo}</span>`;
+        item.addEventListener("click", () => drawRoute(r));
+        list.appendChild(item);
+      });
+
+      // Abrir modal
+      bootstrap.Modal.getOrCreateInstance(document.getElementById("rotasModal")).show();
+
+      // Atualiza caixa lateral
+      listarRotasProximas();
+
+    } catch (e) {
+      console.error(e);
+      mostrarAvisoTopo("❌ Erro ao carregar rotas.");
+    }
+  }
+
+
+  /* ==========================================================
+      🔥 PARTE 8 — LISTAR ROTAS PROXIMAS - SEM ALTERAÇÕES
+  ========================================================== */
+
+  async function listarRotasProximas() {
+    const box = document.getElementById("listaRotasProximas");
+    if (!box) return;
+
+    box.innerHTML = "<em>Carregando rotas...</em>";
+    box.style.display = "block";
+
+    try {
+      const resClosest = await fetch(`/api/routes/closest?lat=${clientLat}&lon=${clientLng}`);
+      const closest = await resClosest.json();
+
+      let html = "";
+
+      if (closest.length > 0) {
+        html += `<div class="fw-bold text-warning mb-1">🔥 Rotas mais próximas de você:</div>`;
+
+        closest
+                .filter(r => r.distanceToUser <= filtroRaio)
+                .filter(r => filtroLinhas.includes(String(r.codigoLinhaOlhoVivo)))
+                .forEach((r, i) => {
+                  let corDist =
+                          r.distanceToUser < 0.5 ? "#00ff9d" :
+                                  r.distanceToUser < 1.0 ? "#ffcc00" :
+                                          "#ff6666";
+
+                  html += `
+                    <div class="ms-2 mb-1">
+                        ${i + 1}️⃣ <b>Linha SPTrans ${r.codigoLinhaOlhoVivo}</b><br>
+                        <span style="color:${corDist};">
+                            📍 ${(r.distanceToUser * 1000).toFixed(0)} metros
+                        </span>
+                    </div>`;
+                });
+
+      } else {
+        html = "<span style='color:#ccc;'>Nenhuma rota próxima encontrada</span>";
+      }
+
+      box.innerHTML = html;
+
+    } catch {
+      box.innerHTML = "<span style='color:#f88;'>❌ Erro ao carregar rotas</span>";
+    }
+  }
+
+
+  /* ==========================================================
+     🔥 PARTE 9 — DESENHAR ROTA SELECIONADA
+  ========================================================== */
+
+  function drawRoute(route) {
+    if (routeLayer) map.removeLayer(routeLayer);
+
+    if (!route.coordinates || !route.coordinates.length) {
+      alert("Esta rota não possui coordenadas registradas.");
+      return;
+    }
+
+    let corDistancia =
+            route.distanceToUser < 0.5 ? "#00ff9d" :
+                    route.distanceToUser < 1.0 ? "#ffcc00" :
+                            "#ff4444";
+
+    routeLayer = L.polyline(route.coordinates, {
+      color: corDistancia,
+      weight: 6,
+      opacity: 0.85
+    }).addTo(map);
+
+    map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
+
+    setTimeout(() => {
+      map.flyToBounds(routeLayer.getBounds(), {
+        padding: [40,40],
+        animate: true,
+        duration: 1.5
+      });
+    }, 300);
+  }
+
+  /* ==========================================================
+     🔥 PARTE 10 — LOGOUT
+  ========================================================== */
+
+  function logout() {
+    localStorage.removeItem("clientLogged");
+    localStorage.removeItem("clientEmail");
+    window.location.href = "/mainPage";
+  }
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerenciamento de Motoristas</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+
+<div class="container mt-4">
+  <div class="card shadow-lg p-4">
+    <h2 class="text-primary mb-4">Gerenciamento de Motoristas</h2>
+
+    <div class="mb-3 d-flex justify-content-start gap-2">
+      <a th:href="@{/driver/new_driver}" class="btn btn-success">+ Novo Motorista</a>
+      <a th:href="@{/admin/menu_users}" class="btn btn-secondary">Voltar</a>
+    </div>
+
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+      <tr>
+        <th>ID</th>
+        <th>Nome</th>
+        <th>Email</th>
+        <th>CPF</th>
+        <th>CNH</th>
+        <th>Categoria</th>
+        <th>Validade CNH</th>
+        <th>Status</th>
+        <th>Ações</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="driver : ${drivers}">
+        <td th:text="${driver.id}"></td>
+        <td th:text="${driver.name}"></td>
+        <td th:text="${driver.email}"></td>
+        <td th:text="${driver.cpf}"></td>
+        <td th:text="${driver.cnh}"></td>
+        <td th:text="${driver.cnhCategory}"></td>
+        <td th:text="${#temporals.format(driver.cnhValidity, 'dd/MM/yyyy')}"></td>
+        <td th:text="${driver.status}"></td>
+        <td>
+          <div class="btn-group" role="group">
+            <a th:href="@{'/driver/' + ${driver.id} + '/edit'}"
+               class="btn btn-warning btn-sm">Editar</a>
+
+            <a th:href="@{'/driver/' + ${driver.id} + '/status'}"
+               class="btn btn-sm"
+               th:classappend="${driver.status.name() == 'ATIVO'} ? 'btn-danger' : 'btn-success'">
+              <span th:text="${driver.status.name() == 'ATIVO'} ? 'Desativar' : 'Ativar'"></span>
+            </a>
+          </div>
+        </td>
+
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>
