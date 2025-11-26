@@ -1,14 +1,16 @@
 // ==========================================
-// SelectedRouteContext.tsx — FINAL TIPADO
+// SelectedRouteContext.tsx — VERSÃO COM BASELAT / BASELON
 // ==========================================
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type SelectedRoute = {
+type SelectedRoute = {
     routeId: string;
     shortName: string;
     longName: string;
+    baseLat?: number | null;
+    baseLon?: number | null;
 };
 
 type SelectedRouteContextType = {
@@ -30,33 +32,58 @@ export function SelectedRouteProvider({ children }: { children: React.ReactNode 
     const [selectedRoute, setSelectedRouteState] = useState<SelectedRoute | null>(null);
     const [loadingSelectedRoute, setLoading] = useState(true);
 
-    // Carrega rota salva
+    // Carrega rota salva do AsyncStorage ao iniciar o app
     useEffect(() => {
+        let isMounted = true;
+
         (async () => {
             try {
                 const stored = await AsyncStorage.getItem("selectedRoute");
-                if (stored) {
-                    setSelectedRouteState(JSON.parse(stored));
+
+                console.log("🔵 Valor carregado do AsyncStorage:", stored);
+
+                if (stored && isMounted) {
+                    const parsed = JSON.parse(stored);
+                    console.log("🟢 JSON.parse(stored):", parsed);
+
+                    setSelectedRouteState(parsed);
+                } else {
+                    console.log("🟡 Nenhum selectedRoute salvo no AsyncStorage.");
                 }
+
+            } catch (err) {
+                console.log("❌ Erro ao carregar selectedRoute:", err);
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         })();
+
+        return () => { isMounted = false; };
     }, []);
 
     const setSelectedRoute = async (route: SelectedRoute | null) => {
-        setSelectedRouteState(route);
+        console.log("🟦 setSelectedRoute CHAMADO com:", route);   // <--- AQUI
+        try {
+            setSelectedRouteState(route);
 
-        if (route) {
-            await AsyncStorage.setItem("selectedRoute", JSON.stringify(route));
-        } else {
-            await AsyncStorage.removeItem("selectedRoute");
+            if (route) {
+                await AsyncStorage.setItem("selectedRoute", JSON.stringify(route));
+                console.log("🟩 SALVO NO ASYNC:", route);        // <--- AQUI
+            } else {
+                await AsyncStorage.removeItem("selectedRoute");
+            }
+        } catch (err) {
+            console.log("Erro ao salvar selectedRoute:", err);
         }
     };
 
     const clearSelectedRoute = async () => {
-        setSelectedRouteState(null);
-        await AsyncStorage.removeItem("selectedRoute");
+        try {
+            setSelectedRouteState(null);
+            await AsyncStorage.removeItem("selectedRoute");
+        } catch (err) {
+            console.log("Erro ao limpar selectedRoute:", err);
+        }
     };
 
     return (
@@ -65,7 +92,7 @@ export function SelectedRouteProvider({ children }: { children: React.ReactNode 
                 selectedRoute,
                 setSelectedRoute,
                 clearSelectedRoute,
-                loadingSelectedRoute,
+                loadingSelectedRoute
             }}
         >
             {children}

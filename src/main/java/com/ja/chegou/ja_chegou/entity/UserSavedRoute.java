@@ -16,4 +16,8 @@ public class UserSavedRoute {
     private String routeId;
     private String shortName;
     private String longName;
+
+    // === NOVOS CAMPOS: ponto base de referência ===
+    private Double baseLat;
+    private Double baseLon;
 }

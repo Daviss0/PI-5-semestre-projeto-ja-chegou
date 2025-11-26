@@ -1,70 +1,48 @@
 // ==========================================
-// AuthContext.tsx — FINAL TIPADO
+// AuthContext.tsx — VERSÃO CORRIGIDA FINAL
 // ==========================================
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useSelectedRoute } from "./SelectedRouteContext";
+import React, { createContext, useContext, useState } from "react";
 
-type ClientData = {
+type Client = {
+    name: string;
     email: string;
-    name?: string;
 };
 
 type AuthContextType = {
-    client: ClientData | null;
-    loading: boolean;
-    login: (clientData: ClientData) => Promise<void>;
-    logout: () => Promise<void>;
+    client: Client | null;
+    login: (c: Client) => void;
+    logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
     client: null,
-    loading: true,
-    login: async () => {},
-    logout: async () => {},
+    login: () => {},
+    logout: () => {},
 });
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [client, setClient] = useState<ClientData | null>(null);
-    const [loading, setLoading] = useState(true);
+export const AuthProvider = ({ children }: any) => {
+    const [client, setClient] = useState<Client | null>(null);
 
-    const { clearSelectedRoute } = useSelectedRoute();
+    const login = (c: Client) => {
+        // Sanitiza email logo na entrada
+        const safeClient = {
+            ...c,
+            email: c.email.trim(),
+        };
 
-    useEffect(() => {
-        (async () => {
-            try {
-                const stored = await AsyncStorage.getItem("clientData");
-                if (stored) {
-                    setClient(JSON.parse(stored));
-                }
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, []);
-
-    const login = async (clientData: ClientData) => {
-        setClient(clientData);
-        await AsyncStorage.setItem("clientData", JSON.stringify(clientData));
+        setClient(safeClient);
     };
 
-    const logout = async () => {
+    const logout = () => {
         setClient(null);
-
-        await AsyncStorage.removeItem("clientData");
-        await AsyncStorage.removeItem("selectedRoute");
-
-        await clearSelectedRoute(); // LIMPA A ROTA SALVA
     };
 
     return (
-        <AuthContext.Provider value={{ client, loading, login, logout }}>
+        <AuthContext.Provider value={{ client, login, logout }}>
             {children}
         </AuthContext.Provider>
     );
-}
+};
 
-export function useAuth() {
-    return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);

@@ -1,5 +1,5 @@
 // ============================
-// UserRoutesController.java — FINAL
+// UserRoutesController.java — FINAL ATUALIZADO
 // ============================
 
 package com.ja.chegou.ja_chegou.controller;
@@ -20,6 +20,7 @@ public class UserRoutesController {
         this.repository = repository;
     }
 
+    // Salva rota completa (agora incluindo baseLat/baseLon)
     @PostMapping("/add")
     public UserSavedRoute save(@RequestBody UserSavedRoute route) {
         return repository.save(route);
@@ -27,7 +28,8 @@ public class UserRoutesController {
 
     @GetMapping("/{email}")
     public List<UserSavedRoute> list(@PathVariable String email) {
-        return repository.findByEmail(email);
+        String cleanEmail = email.trim(); // remove %0A, espaços, etc.
+        return repository.findByEmail(cleanEmail);
     }
 
     @DeleteMapping("/delete/{id}")

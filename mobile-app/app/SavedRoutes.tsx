@@ -1,9 +1,16 @@
 // ==========================================
-// SavedRoutes.tsx — VERSÃO FINAL
+// SavedRoutes.tsx — UI no padrão da tela de Notificações
 // ==========================================
 
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from "react-native";
+import React, { useState } from "react";
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    ScrollView,
+    Alert,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import { useSelectedRoute } from "../context/SelectedRouteContext";
@@ -15,29 +22,29 @@ type UserRoute = {
     routeId: string;
     shortName: string;
     longName: string;
+    baseLat?: number;
+    baseLon?: number;
 };
 
 export default function SavedRoutes() {
-
     const { client } = useAuth();
     const { setSelectedRoute } = useSelectedRoute();
     const router = useRouter();
 
     const [routes, setRoutes] = useState<UserRoute[]>([]);
 
-    // Carregar rotas SOMENTE se houver login
     const loadSavedRoutes = async () => {
         if (!client) {
             setRoutes([]);
             return;
         }
 
-        const res = await fetch(`${API_BASE_URL}/user/routes/${client.email}`);
+        const cleanEmail = client.email.trim();
+        const res = await fetch(`${API_BASE_URL}/user/routes/${cleanEmail}`);
         const data = await res.json();
         setRoutes(data);
     };
 
-    // Atualiza lista ao entrar na tela
     useFocusEffect(
         React.useCallback(() => {
             loadSavedRoutes();
@@ -64,28 +71,36 @@ export default function SavedRoutes() {
             routeId: route.routeId,
             shortName: route.shortName,
             longName: route.longName,
+            baseLat: route.baseLat ?? null,
+            baseLon: route.baseLon ?? null,
         });
 
         router.push("/MainPage");
     };
 
-    // Tela para usuário deslogado
     if (!client) {
         return (
-            <View style={styles.container}>
-                <Text style={styles.notLoggedText}>Faça login para ver suas rotas salvas.</Text>
+            <View style={styles.centerContainer}>
+                <Text style={styles.notLoggedText}>
+                    Faça login para ver suas rotas salvas.
+                </Text>
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <View style={styles.wrapper}>
+            {/* Botão Voltar */}
+            <TouchableOpacity style={styles.backButton} onPress={() => router.push("/Profile")}>
+                <Ionicons name="arrow-back" size={28} color="#FFF" />
+            </TouchableOpacity>
+
+            {/* Título */}
             <Text style={styles.title}>Minhas Rotas Salvas</Text>
 
-            <ScrollView style={{ marginTop: 20 }}>
+            <ScrollView style={{ marginTop: 10 }}>
                 {routes.map((r) => (
                     <View key={r.id} style={styles.card}>
-
                         <View style={styles.cardHeader}>
                             <Text style={styles.cardTitle}>
                                 {r.shortName} — {r.longName}
@@ -96,10 +111,12 @@ export default function SavedRoutes() {
                             </TouchableOpacity>
                         </View>
 
-                        <TouchableOpacity style={styles.button} onPress={() => handleViewRoute(r)}>
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={() => handleViewRoute(r)}
+                        >
                             <Text style={styles.buttonText}>Ver rota</Text>
                         </TouchableOpacity>
-
                     </View>
                 ))}
             </ScrollView>
@@ -108,27 +125,45 @@ export default function SavedRoutes() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#0E0E10", paddingTop: 50, paddingHorizontal: 20 },
-    title: { color: "#FFF", fontSize: 22, fontWeight: "bold" },
+    wrapper: {
+        flex: 1,
+        backgroundColor: "#0E0E10",
+        paddingTop: 90,
+        paddingHorizontal: 20,
+    },
 
-    notLoggedText: {
-        marginTop: 60,
+    backButton: {
+        position: "absolute",
+        top: 50,
+        left: 20,
+        padding: 6,
+        zIndex: 20,
+    },
+
+    title: {
         color: "#FFF",
-        fontSize: 18,
+        fontSize: 26,
+        fontWeight: "bold",
         textAlign: "center",
+        marginBottom: 20,
     },
 
     card: {
         backgroundColor: "#1A1A1D",
         padding: 16,
         borderRadius: 14,
-        marginBottom: 14,
+        marginBottom: 16,
+        borderColor: "#333",
+        borderWidth: 1,
     },
+
     cardHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        marginBottom: 14,
     },
+
     cardTitle: {
         color: "#FFF",
         fontSize: 16,
@@ -139,10 +174,27 @@ const styles = StyleSheet.create({
 
     button: {
         backgroundColor: "#FFF",
-        marginTop: 12,
-        paddingVertical: 10,
-        borderRadius: 10,
+        paddingVertical: 12,
+        borderRadius: 12,
         alignItems: "center",
     },
-    buttonText: { color: "#000", fontWeight: "bold" },
+
+    buttonText: {
+        color: "#000",
+        fontWeight: "bold",
+        fontSize: 16,
+    },
+
+    centerContainer: {
+        flex: 1,
+        backgroundColor: "#0E0E10",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    notLoggedText: {
+        color: "#FFF",
+        fontSize: 18,
+        textAlign: "center",
+    },
 });

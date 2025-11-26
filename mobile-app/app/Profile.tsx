@@ -26,8 +26,14 @@ export default function Profile() {
     const handleNavigate = (screen: string) => {
         if (screen === "Meus dados") {
             router.push("/ProfileData");
+
         } else if (screen === "Minhas rotas") {
             router.push("/SavedRoutes");
+
+        } else if (screen === "Notificações") {
+            // 👉 Agora abre a tela de configurações de notificações
+            router.push("/ProfileNotifications");
+
         } else {
             Alert.alert("Em desenvolvimento", `Tela ${screen} será adicionada futuramente.`);
         }
@@ -59,7 +65,13 @@ export default function Profile() {
                 <View style={styles.menuSection}>
                     <MenuItem icon="person-outline" label="Meus dados" onPress={() => handleNavigate("Meus dados")} />
                     <MenuItem icon="map-outline" label="Minhas rotas" onPress={() => handleNavigate("Minhas rotas")} />
-                    <MenuItem icon="notifications-outline" label="Notificações" onPress={() => handleNavigate("Notificações")} />
+
+                    {/* AQUI — botão de notificações funcionando */}
+                    <MenuItem
+                        icon="notifications-outline"
+                        label="Notificações"
+                        onPress={() => handleNavigate("Notificações")}
+                    />
                 </View>
             </ScrollView>
 

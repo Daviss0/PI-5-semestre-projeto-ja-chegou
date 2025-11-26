@@ -1,5 +1,5 @@
 // ==========================================
-// MainPage.tsx — VERSÃO FINAL ABSOLUTA CORRIGIDA
+// MainPage.tsx — VERSÃO OTIMIZADA FINAL
 // ==========================================
 
 import React, { useState, useRef, useEffect } from "react";
@@ -27,6 +27,7 @@ const LINE_COLORS: Record<string, string> = {
     "6091-51": "#5500FF", "N631-11": "#9900FF", "546L-10": "#CC00FF"
 };
 
+// Tipos
 type BusInfo = { px: number; py: number; p: string; a: boolean; ta: string };
 
 type RouteResult = {
@@ -46,6 +47,7 @@ export default function MainPage() {
 
     const mapRef = useRef<MapView>(null);
 
+    // Estados principais
     const [region, setRegion] = useState({
         latitude: -23.55052,
         longitude: -46.633308,
@@ -55,15 +57,23 @@ export default function MainPage() {
 
     const [query, setQuery] = useState("");
     const [suggestions, setSuggestions] = useState<any[]>([]);
-
     const [searched, setSearched] = useState(false);
     const [mapLocked, setMapLocked] = useState(false);
-
     const [searchedPin, setSearchedPin] = useState<{ lat: number; lon: number } | null>(null);
     const [closestRoutes, setClosestRoutes] = useState<RouteResult[]>([]);
+    const [isTyping, setIsTyping] = useState(false);
 
     let debounceTimer: any = null;
+    let typingTimer: any = null;
+
     const forceSingleRouteMode = !!selectedRoute;
+
+    // ============================================================
+    // 🔁 LOG ÚNICO PARA DEBUG (sem spam)
+    // ============================================================
+    useEffect(() => {
+        console.log("➡️ selectedRoute recebido na MainPage:", selectedRoute);
+    }, [selectedRoute]);
 
     // ============================================================
     // 💾 SALVAR ROTA
@@ -77,6 +87,11 @@ export default function MainPage() {
             return;
         }
 
+        if (!searchedPin) {
+            Alert.alert("Erro", "Não foi possível identificar o ponto base.");
+            return;
+        }
+
         try {
             await fetch(`${API_BASE_URL}/user/routes/add`, {
                 method: "POST",
@@ -86,6 +101,8 @@ export default function MainPage() {
                     routeId: route.routeId,
                     shortName: route.shortName,
                     longName: route.longName,
+                    baseLat: searchedPin.lat,
+                    baseLon: searchedPin.lon
                 }),
             });
 
@@ -96,43 +113,39 @@ export default function MainPage() {
         }
     };
 
-    // 🔥 NÃO RENDERIZA ATÉ CONTEXTO CARREGAR
-    if (loadingSelectedRoute) {
-        return (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0E0E10" }}>
-                <Text style={{ color: "#FFF" }}>Carregando rota...</Text>
-            </View>
-        );
-    }
-
     // ============================================================
-    // 🔎 SUGESTÕES VIA BACKEND
+    // 🔄 Sugestões com DEBOUNCE REAL
     // ============================================================
     const fetchSuggestions = (t: string) => {
+
+        t = t.trim().substring(0, 40);
+
         if (debounceTimer) clearTimeout(debounceTimer);
-        if (t.length < 3) return setSuggestions([]);
+
+        if (t.length < 3) {
+            setSuggestions([]);
+            return;
+        }
 
         debounceTimer = setTimeout(async () => {
             try {
-                const res = await fetch(`${API_BASE_URL}/maps/suggestions?q=${encodeURIComponent(t)}`);
+                const res = await fetch(
+                    `${API_BASE_URL}/maps/suggestions?q=${encodeURIComponent(t)}`
+                );
                 const data = await res.json();
                 setSuggestions(data);
             } catch {}
-        }, 120);
+        }, 500);
     };
 
     // ============================================================
-    // 📌 SELECIONAR SUGESTÃO (SEM ALTERAR TEXTO DO INPUT!)
+    // 📍 Selecionar sugestão
     // ============================================================
     const handleSelectSuggestion = (item: any) => {
         const lat = parseFloat(item.lat);
         const lon = parseFloat(item.lon);
 
-        // ☑ NÃO alterar o input (antes isso quebrava tudo)
-        // setQuery(item.display_name);  ❌ NÃO USAR
-
         setSuggestions([]);
-
         setSearchedPin({ lat, lon });
         setSearched(true);
         setMapLocked(true);
@@ -151,27 +164,28 @@ export default function MainPage() {
     };
 
     // ============================================================
-    // ▶ BUSCA DIRETA (SEM SUGESTÕES)
+    // 🔍 BUSCA MANUAL
     // ============================================================
     const handleSearch = async () => {
         if (!query) return;
 
         try {
-            const res = await fetch(`${API_BASE_URL}/maps/search?q=${encodeURIComponent(query)}`);
-            const data = await res.json();
+            const res = await fetch(
+                `${API_BASE_URL}/maps/search?q=${encodeURIComponent(query.trim())}`
+            );
 
+            const data = await res.json();
             if (!data.length) {
                 Alert.alert("Endereço não encontrado");
                 return;
             }
 
             handleSelectSuggestion(data[0]);
-
         } catch {}
     };
 
     // ============================================================
-    // ▶ ATUALIZAR APENAS ÔNIBUS NA ROTA SALVA
+    // 🚍 Atualizar ônibus apenas em rota salva
     // ============================================================
     const updateSingleRouteBuses = async () => {
         if (!closestRoutes[0]) return;
@@ -187,16 +201,17 @@ export default function MainPage() {
     };
 
     // ============================================================
-    // ▶ CARREGAR ROTAS
+    // 🔥 Carregar rotas
     // ============================================================
     const loadClosestRoutes = async (latOverride?: number, lonOverride?: number) => {
 
-        // ⭐ MODO ROTA SALVA
         if (forceSingleRouteMode) {
 
             setClosestRoutes([]);
 
-            const res = await fetch(`${API_BASE_URL}/routes/byShortName/${selectedRoute!.shortName}`);
+            const res = await fetch(
+                `${API_BASE_URL}/routes/byShortName/${selectedRoute!.shortName}`
+            );
             const route: RouteResult = await res.json();
 
             setClosestRoutes([route]);
@@ -218,7 +233,6 @@ export default function MainPage() {
             return;
         }
 
-        // ⭐ MODO ROTAS PRÓXIMAS
         let lat = latOverride ?? searchedPin?.lat;
         let lon = lonOverride ?? searchedPin?.lon;
         if (!lat || !lon) return;
@@ -231,14 +245,14 @@ export default function MainPage() {
     };
 
     // ============================================================
-    // 🔁 CARREGAR ROTA SALVA AO ENTRAR
+    // 🔁 Carregar rota salva automaticamente
     // ============================================================
     useEffect(() => {
         if (forceSingleRouteMode) loadClosestRoutes();
     }, [selectedRoute]);
 
     // ============================================================
-    // ⏱ ATUALIZAR SOMENTE ÔNIBUS DA ROTA SALVA
+    // 🚍 Atualização periódica apenas em rota salva
     // ============================================================
     useEffect(() => {
         if (!forceSingleRouteMode) return;
@@ -246,11 +260,10 @@ export default function MainPage() {
         updateSingleRouteBuses();
         const interval = setInterval(updateSingleRouteBuses, 2000);
         return () => clearInterval(interval);
-
     }, [closestRoutes.length, forceSingleRouteMode]);
 
     // ============================================================
-    // 🔙 LIMPAR ESTADO
+    // 🔙 Botão voltar
     // ============================================================
     const handleBack = () => {
         clearSelectedRoute();
@@ -262,11 +275,23 @@ export default function MainPage() {
     };
 
     // ============================================================
-    // 🖥 RENDERIZAÇÃO
+    // LOADING DO CONTEXTO
+    // ============================================================
+    if (loadingSelectedRoute) {
+        return (
+            <View style={{ flex: 1, backgroundColor: "#0E0E10", justifyContent: "center", alignItems: "center" }}>
+                <Text style={{ color: "#FFF" }}>Carregando rota...</Text>
+            </View>
+        );
+    }
+
+    // ============================================================
+    // UI
     // ============================================================
     return (
         <View style={styles.container}>
 
+            {/* MAPA */}
             <MapView
                 ref={mapRef}
                 style={styles.map}
@@ -274,8 +299,20 @@ export default function MainPage() {
                 onRegionChangeComplete={(r) => !mapLocked && setRegion(r)}
             >
 
-                {/* SHAPES */}
-                {closestRoutes.map((r, i) => (
+                {/* Ponto base */}
+                {forceSingleRouteMode && selectedRoute?.baseLat && selectedRoute?.baseLon && (
+                    <Marker
+                        coordinate={{
+                            latitude: selectedRoute.baseLat,
+                            longitude: selectedRoute.baseLon
+                        }}
+                    >
+                        <View style={styles.searchMarker} />
+                    </Marker>
+                )}
+
+                {/* Shapes — NÃO renderiza enquanto digitando */}
+                {!isTyping && closestRoutes.map((r, i) => (
                     <Polyline
                         key={`shape-${r.shortName}-${i}`}
                         strokeColor={LINE_COLORS[r.shortName] || "#00FF00"}
@@ -287,8 +324,8 @@ export default function MainPage() {
                     />
                 ))}
 
-                {/* ÔNIBUS */}
-                {closestRoutes.flatMap((r) =>
+                {/* Ônibus — NÃO renderiza enquanto digitando */}
+                {!isTyping && closestRoutes.flatMap((r) =>
                     r.buses?.map((b) => (
                         <Marker
                             key={`bus-${r.shortName}-${b.p}-${b.ta}`}
@@ -308,7 +345,7 @@ export default function MainPage() {
                     ))
                 )}
 
-                {/* MARCADOR DO USUÁRIO */}
+                {/* Marcador do usuário */}
                 {searchedPin && (
                     <Marker coordinate={{ latitude: searchedPin.lat, longitude: searchedPin.lon }}>
                         <View style={styles.searchMarker} />
@@ -317,14 +354,14 @@ export default function MainPage() {
 
             </MapView>
 
-            {/* BOTÃO VOLTAR */}
+            {/* Botão voltar */}
             {(searched || forceSingleRouteMode) && (
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="arrow-back" size={26} color="#FFF" />
                 </TouchableOpacity>
             )}
 
-            {/* CAIXA DE BUSCA */}
+            {/* Caixa de busca */}
             {!searched && !forceSingleRouteMode && (
                 <>
                     <View style={styles.searchBox}>
@@ -335,8 +372,12 @@ export default function MainPage() {
                             placeholderTextColor="#777"
                             value={query}
                             onChangeText={(t) => {
+                                setIsTyping(true);
                                 setQuery(t);
                                 fetchSuggestions(t);
+
+                                if (typingTimer) clearTimeout(typingTimer);
+                                typingTimer = setTimeout(() => setIsTyping(false), 600);
                             }}
                             onSubmitEditing={handleSearch}
                         />
@@ -358,7 +399,7 @@ export default function MainPage() {
                 </>
             )}
 
-            {/* BOTTOM SHEET - LISTA DE ROTAS */}
+            {/* Bottom sheet */}
             {(searched || forceSingleRouteMode) && (
                 <View style={styles.bottomSheet}>
                     <View style={styles.sheetHandle} />
@@ -366,12 +407,16 @@ export default function MainPage() {
                     <ScrollView>
                         {closestRoutes.map((r, i) => (
                             <View key={i} style={styles.routeCard}>
+
                                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                                    <View style={{
-                                        width: 12, height: 12,
-                                        borderRadius: 6,
-                                        backgroundColor: LINE_COLORS[r.shortName]
-                                    }} />
+                                    <View
+                                        style={{
+                                            width: 12,
+                                            height: 12,
+                                            borderRadius: 6,
+                                            backgroundColor: LINE_COLORS[r.shortName]
+                                        }}
+                                    />
                                     <Text style={styles.routeTitle}>
                                         {r.shortName} — {r.longName}
                                     </Text>
@@ -385,6 +430,7 @@ export default function MainPage() {
                                         <Text style={styles.routeButtonText}>Selecionar rota</Text>
                                     </TouchableOpacity>
                                 )}
+
                             </View>
                         ))}
                     </ScrollView>
@@ -475,13 +521,17 @@ const styles = StyleSheet.create({
 
     routeButton: {
         marginTop: 10,
-        paddingVertical: 8,
+        paddingVertical: 10,
         borderRadius: 10,
-        backgroundColor: "#1A1A1D",
-        alignItems: "center"
+        backgroundColor: "#FFFFFF",
+        alignItems: "center",
     },
 
-    routeButtonText: { color: "#FFF", fontSize: 14, fontWeight: "bold" },
+    routeButtonText: {
+        color: "#000000",
+        fontSize: 15,
+        fontWeight: "bold"
+    },
 
     searchMarker: {
         width: 26,

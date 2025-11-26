@@ -6,22 +6,7 @@ import { SelectedRouteProvider } from "../context/SelectedRouteContext";
 import { ActivityIndicator, View } from "react-native";
 
 function TabsLayout() {
-    const { client, loading } = useAuth();
-
-    if (loading) {
-        return (
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: "#0E0E10",
-                    justifyContent: "center",
-                    alignItems: "center",
-                }}
-            >
-                <ActivityIndicator size="large" color="#fff" />
-            </View>
-        );
-    }
+    const { client } = useAuth();  // <- sem loading
 
     return (
         <Tabs
@@ -36,6 +21,7 @@ function TabsLayout() {
                 headerShown: false,
             }}
         >
+            {/* Mapa */}
             <Tabs.Screen
                 name="MainPage"
                 options={{
@@ -46,6 +32,7 @@ function TabsLayout() {
                 }}
             />
 
+            {/* Perfil */}
             <Tabs.Screen
                 name="Profile"
                 options={{
@@ -56,7 +43,7 @@ function TabsLayout() {
                 }}
                 listeners={({ navigation }) => ({
                     tabPress: (e) => {
-                        if (!loading && !client) {
+                        if (!client) {
                             e.preventDefault();
                             navigation.navigate("Login");
                         }
@@ -64,13 +51,20 @@ function TabsLayout() {
                 })}
             />
 
-            <Tabs.Screen name="Login" options={{ href: null, headerShown: false }} />
-            <Tabs.Screen name="Register" options={{ href: null, headerShown: false }} />
-            <Tabs.Screen name="RegisterDetails" options={{ href: null, headerShown: false }} />
-            <Tabs.Screen name="index" options={{ href: null, headerShown: false }} />
+            {/* Telas ocultas */}
+            <Tabs.Screen name="ProfileData" options={{ href: null }} />
+            <Tabs.Screen name="SavedRoutes" options={{ href: null }} />
+            <Tabs.Screen name="ProfileNotifications" options={{ href: null }} />
+
+            <Tabs.Screen name="Login" options={{ href: null }} />
+            <Tabs.Screen name="Register" options={{ href: null }} />
+            <Tabs.Screen name="RegisterDetails" options={{ href: null }} />
+            <Tabs.Screen name="index" options={{ href: null }} />
+
         </Tabs>
     );
 }
+
 
 export default function Layout() {
     return (
